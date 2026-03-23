@@ -1,47 +1,62 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref } from 'vue'
+import TripForm from './components/TripForm.vue'
+import TripList from './components/TripList.vue'
+
+const refreshTrigger = ref(0)
+const editingTrip = ref(null)
+
+function onTripSaved() {
+  refreshTrigger.value++
+  editingTrip.value = null
+}
+
+function onEditTrip(trip) {
+  editingTrip.value = trip
+}
+
+function onResetEdit() {
+  editingTrip.value = null
+}
 </script>
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
+    <h1>Travel Manager</h1>
   </header>
 
   <main>
-    <TheWelcome />
+    <TripForm
+      :editingTrip="editingTrip"
+      @trip-saved="onTripSaved"
+      @reset-edit="onResetEdit"
+    />
+    <TripList
+      :refreshTrigger="refreshTrigger"
+      @edit-trip="onEditTrip"
+    />
   </main>
 </template>
 
 <style scoped>
 header {
-  line-height: 1.5;
+  background-color: #3498db;
+  color: white;
+  padding: 16px 24px;
+  margin-bottom: 24px;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 </style>

@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { getTrips, deleteTrip } from '../api'
 
 const props = defineProps({
@@ -65,7 +65,6 @@ async function confirmDelete(id) {
 onMounted(fetchTrips)
 
 // Reload when refreshTrigger changes (e.g., after save)
-import { watch } from 'vue'
 watch(() => props.refreshTrigger, fetchTrips)
 </script>
 
