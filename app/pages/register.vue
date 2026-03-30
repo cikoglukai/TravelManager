@@ -1,13 +1,19 @@
 <template>
   <div class="auth-page">
+    <div class="auth-bg">
+      <div class="auth-bg-circle c1"></div>
+      <div class="auth-bg-circle c2"></div>
+      <div class="auth-bg-circle c3"></div>
+    </div>
+
     <div class="auth-card">
       <div class="auth-header">
-        <h1>✈️ Trip Manager</h1>
-        <p>Plan and manage your leisure travels</p>
+        <div class="auth-logo">✈</div>
+        <h1>TripManager</h1>
+        <p>Your personal travel companion</p>
       </div>
 
-      <!-- Step 1: enter email to check whether the account exists -->
-      <form v-if="step === 1" @submit.prevent="checkEmail">
+      <form v-if="step === 1" @submit.prevent="checkEmail" class="auth-form">
         <div class="form-group">
           <label for="email">Email Address</label>
           <input
@@ -20,18 +26,21 @@
           />
         </div>
         <div class="form-error" v-if="error">{{ error }}</div>
-        <button type="submit" class="btn btn-primary" style="width:100%" :disabled="loading">
-          {{ loading ? 'Checking…' : 'Continue' }}
+        <button type="submit" class="btn btn-auth" :disabled="loading">
+          {{ loading ? 'Checking…' : 'Continue →' }}
         </button>
       </form>
 
-      <!-- Step 2: shown only when the email was not found — collect name to register -->
-      <form v-else @submit.prevent="register">
-        <p class="step-hint">
-          No account found for <strong>{{ form.email }}</strong>.<br />Enter your name to create one.
-        </p>
+      <form v-else @submit.prevent="register" class="auth-form">
+        <div class="step-hint">
+          <span class="step-hint-icon">👋</span>
+          <div>
+            <strong>Welcome!</strong><br/>
+            No account found for <em>{{ form.email }}</em>. Let's create one.
+          </div>
+        </div>
         <div class="form-group">
-          <label for="name">Full Name</label>
+          <label for="name">Your Name</label>
           <input
             id="name"
             v-model="form.name"
@@ -42,31 +51,30 @@
           />
         </div>
         <div class="form-error" v-if="error">{{ error }}</div>
-        <div style="display:flex;gap:10px">
-          <button type="button" class="btn btn-secondary" @click="step = 1; error = ''">← Back</button>
-          <button type="submit" class="btn btn-primary" style="flex:1" :disabled="loading">
-            {{ loading ? 'Creating…' : 'Create Account' }}
+        <div class="auth-actions">
+          <button type="button" class="btn btn-back-auth" @click="step = 1; error = ''">← Back</button>
+          <button type="submit" class="btn btn-auth" :disabled="loading">
+            {{ loading ? 'Creating…' : 'Create Account →' }}
           </button>
         </div>
       </form>
+
+      <div class="auth-footer">
+        Plan · Explore · Remember
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 const { user, setUser } = useAuth()
-
-// Redirect already-authenticated users straight to their trips
 onMounted(() => { if (user.value) navigateTo('/trips') })
 
-// step 1 = email input, step 2 = name input (new users only)
 const step = ref(1)
 const form = reactive({ email: '', name: '' })
 const error = ref('')
 const loading = ref(false)
 
-// Step 1 handler — posts only the email.
-// The server returns the existing user (login) or throws 422 (new user, needs name).
 async function checkEmail() {
   error.value = ''
   loading.value = true
@@ -76,7 +84,7 @@ async function checkEmail() {
     navigateTo('/trips')
   } catch (err) {
     if (err.status === 422) {
-      step.value = 2  // email not found — show name field
+      step.value = 2
     } else {
       error.value = err.data?.statusMessage || err.message || 'Something went wrong'
     }
@@ -85,15 +93,11 @@ async function checkEmail() {
   }
 }
 
-// Step 2 handler — posts email + name to create a new account, then logs in
 async function register() {
   error.value = ''
   loading.value = true
   try {
-    const u = await $fetch('/api/users', {
-      method: 'POST',
-      body: { email: form.email, name: form.name },
-    })
+    const u = await $fetch('/api/users', { method: 'POST', body: { email: form.email, name: form.name } })
     setUser(u)
     navigateTo('/trips')
   } catch (err) {
@@ -110,59 +114,159 @@ async function register() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--navy);
   padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
+
+.auth-bg { position: absolute; inset: 0; pointer-events: none; }
+.auth-bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.07;
+  background: var(--gold);
+}
+.c1 { width: 600px; height: 600px; top: -200px; right: -150px; }
+.c2 { width: 400px; height: 400px; bottom: -100px; left: -100px; }
+.c3 { width: 250px; height: 250px; top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.04; }
+
 .auth-card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 42px 40px;
+  background: var(--white);
+  border-radius: 20px;
+  padding: 52px 44px 40px;
   width: 100%;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  max-width: 440px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 0.5s ease;
 }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .auth-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 36px;
+}
+.auth-logo {
+  font-size: 2.2rem;
+  background: var(--navy);
+  color: var(--gold);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
 }
 .auth-header h1 {
-  font-size: 2rem;
-  color: #2c3e50;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.9rem;
+  color: var(--navy);
   margin-bottom: 6px;
 }
 .auth-header p {
-  color: #7f8c8d;
+  color: var(--text-muted);
+  font-size: 0.92rem;
 }
+
+.auth-form { display: flex; flex-direction: column; gap: 0; }
+
 .form-group {
   margin-bottom: 20px;
 }
 .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
   font-weight: 600;
-  color: #444;
-  font-size: 0.9rem;
+  color: var(--navy);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 .form-group input {
   width: 100%;
-  padding: 11px 14px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: 2px solid var(--sand-dark);
+  border-radius: 10px;
   font-size: 1rem;
   font-family: inherit;
-  transition: border-color 0.2s;
+  background: var(--sand);
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s;
 }
 .form-group input:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--gold);
+  background: var(--white);
 }
-.step-hint {
-  background: #f0f4f8;
-  border-radius: 7px;
-  padding: 12px 14px;
+
+.btn-auth {
+  width: 100%;
+  padding: 14px;
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  letter-spacing: 0.04em;
+}
+.btn-auth:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--navy);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(201,168,76,0.35);
+}
+.btn-auth:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-back-auth {
+  padding: 14px 20px;
+  background: var(--sand);
+  color: var(--text-muted);
+  border: none;
+  border-radius: 10px;
   font-size: 0.9rem;
-  color: #555;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-back-auth:hover { background: var(--sand-dark); }
+
+.auth-actions {
+  display: flex;
+  gap: 10px;
+}
+.auth-actions .btn-auth { flex: 1; }
+
+.step-hint {
+  background: var(--sand);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.88rem;
+  color: var(--text);
   margin-bottom: 20px;
-  line-height: 1.6;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.step-hint-icon { font-size: 1.2rem; }
+
+.auth-footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 </style>

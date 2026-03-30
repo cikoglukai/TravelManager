@@ -1,28 +1,29 @@
 <template>
   <form class="trip-form" @submit.prevent="handleSubmit">
-    <div class="form-group">
-      <label for="title">Title *</label>
-      <input
-        id="title"
-        v-model="form.title"
-        type="text"
-        placeholder='e.g. "Family Trip to Norway"'
-        required
-      />
+    <div class="form-row">
+      <div class="form-group">
+        <label for="title">Trip Title *</label>
+        <input
+          id="title"
+          v-model="form.title"
+          type="text"
+          placeholder='e.g. "Family Trip to Norway"'
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="destination">Destination *</label>
+        <input
+          id="destination"
+          v-model="form.destination"
+          type="text"
+          placeholder="e.g. Norway"
+          required
+        />
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="destination">Destination *</label>
-      <input
-        id="destination"
-        v-model="form.destination"
-        type="text"
-        placeholder="e.g. Norway"
-        required
-      />
-    </div>
-
-    <div class="form-group">
+    <div class="form-group half">
       <label for="start_date">Start Date *</label>
       <input id="start_date" v-model="form.start_date" type="date" required />
     </div>
@@ -30,7 +31,6 @@
     <div class="form-group">
       <label for="short_description">
         Short Description *
-        <!-- Live character counter; turns red when the 80-char limit is reached -->
         <span class="char-count" :class="{ exceeded: form.short_description.length > 80 }">
           {{ form.short_description.length }}/80
         </span>
@@ -61,7 +61,6 @@
       <button type="submit" class="btn btn-primary" :disabled="loading">
         {{ loading ? 'Saving…' : (isEdit ? 'Update Trip' : 'Create Trip') }}
       </button>
-      <!-- Cancel button is only shown in edit mode -->
       <button v-if="isEdit" type="button" class="btn btn-secondary" @click="$emit('cancelled')">
         Cancel
       </button>
@@ -70,24 +69,14 @@
 </template>
 
 <script setup>
-// Props:
-//   trip  — when provided, the form operates in edit mode and is pre-filled
-// Emits:
-//   saved(trip)   — emitted with the API response after a successful save
-//   cancelled     — emitted when the user clicks Cancel in edit mode
-const props = defineProps({
-  trip: { type: Object, default: null },
-})
+const props = defineProps({ trip: { type: Object, default: null } })
 const emit = defineEmits(['saved', 'cancelled'])
-
 const { user } = useAuth()
 
-// isEdit drives the label text ("Create Trip" vs "Update Trip") and the API method used
 const isEdit = computed(() => !!props.trip)
 const error = ref('')
 const loading = ref(false)
 
-// Pre-fill with the existing trip values in edit mode; empty strings for create mode
 const form = reactive({
   title: props.trip?.title ?? '',
   destination: props.trip?.destination ?? '',
@@ -102,19 +91,10 @@ async function handleSubmit() {
   try {
     let result
     if (isEdit.value) {
-      // Update existing trip — user_id is not sent because ownership doesn't change
-      result = await $fetch(`/api/trips/${props.trip.id}`, {
-        method: 'PUT',
-        body: { ...form },
-      })
+      result = await $fetch(`/api/trips/${props.trip.id}`, { method: 'PUT', body: { ...form } })
     } else {
-      // Create new trip — attach the logged-in user's id
-      result = await $fetch('/api/trips', {
-        method: 'POST',
-        body: { ...form, user_id: user.value.id },
-      })
+      result = await $fetch('/api/trips', { method: 'POST', body: { ...form, user_id: user.value.id } })
     }
-    // Pass the saved trip back to the parent (new.vue navigates; [id].vue updates in-place)
     emit('saved', result)
   } catch (err) {
     error.value = err.data?.statusMessage || err.message || 'An error occurred'
@@ -126,48 +106,67 @@ async function handleSubmit() {
 
 <style scoped>
 .trip-form {
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  background: var(--white);
+  padding: 36px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
+.form-group.half {
+  max-width: 280px;
+}
+
 .form-group label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-weight: 600;
-  color: #444;
-  font-size: 0.9rem;
+  color: var(--navy);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 .char-count {
   font-weight: 400;
-  color: #95a5a6;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
 }
-.char-count.exceeded {
-  color: #e74c3c;
-  font-weight: 600;
-}
+.char-count.exceeded { color: var(--error); font-weight: 600; }
+
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 10px 14px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 12px 16px;
+  border: 2px solid var(--sand-dark);
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-family: inherit;
-  transition: border-color 0.2s;
+  background: var(--sand);
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s;
   resize: vertical;
 }
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--gold);
+  background: var(--white);
 }
+
 .form-actions {
   display: flex;
   gap: 12px;
