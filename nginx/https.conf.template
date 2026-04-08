@@ -1,12 +1,15 @@
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    '' close;
-}
-
 server {
-    listen 80;
-    listen [::]:80;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name cloud-hopper.westeurope.cloudapp.azure.com;
+
+    ssl_certificate /etc/letsencrypt/live/cloud-hopper.westeurope.cloudapp.azure.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/cloud-hopper.westeurope.cloudapp.azure.com/privkey.pem;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
