@@ -1,6 +1,6 @@
-# 🌍 TravelManager – Cloud Run Deployment (Full Documentation)
+#  TravelManager – Cloud Run Deployment (Full Documentation)
 
-## 🧠 Architecture Overview
+##  Architecture Overview
 
 The application is a full-stack, cloud-native travel management system built with Nuxt 3 and deployed on Google Cloud.
 
@@ -15,7 +15,7 @@ It follows a **separation of concerns architecture**:
 
 ---
 
-## 🏗 System Architecture
+## System Architecture
             ┌──────────────────────────────┐
             │        Browser (Client)       │
             │   Vue 3 + Nuxt 3 Frontend    │
@@ -122,6 +122,7 @@ terraform apply
 ```
 
 ### Env Variables for CloudRun
+```bash
 DB_HOST=
 DB_USER=
 DB_PASS=
@@ -130,6 +131,7 @@ DB_NAME=
 FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
+```
 
 ### Build & Run
 ```bash
