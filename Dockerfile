@@ -2,13 +2,22 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Dependencies
 COPY package*.json ./
 RUN npm install
 
+# App source
 COPY . .
 
-EXPOSE 3000
+# Build Nuxt for production (Nitro output)
+RUN npm run build
 
+# Cloud Run uses port 8080
+ENV NODE_ENV=production
 ENV NITRO_HOST=0.0.0.0
+ENV NITRO_PORT=8080
 
-CMD ["npm", "run", "dev"]
+EXPOSE 8080
+
+# Start production server
+CMD ["node", ".output/server/index.mjs"]

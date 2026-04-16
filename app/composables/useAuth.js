@@ -1,45 +1,49 @@
-// useAuth — global authentication state composable.
+// composables/useAuth.js
 //
-// Nuxt's useState creates a key-scoped reactive value shared across all
-// components. Combined with localStorage the session survives page refreshes.
-//
-// Usage: const { user, setUser, logout, initAuth } = useAuth()
+// Cloud-ready authentication composable using Firebase Auth.
+// Replaces localStorage-based fake session with real Identity Provider.
+
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
+
 export const useAuth = () => {
-  // 'user' is the shared state key — all calls to useAuth() reference the same value
-  const user = useState('user', () => null)
+  // Global reactive user state (shared across app)
+  const user = useState("user", () => null);
 
-  // Saves the logged-in user to both reactive state and localStorage
-  const setUser = (u) => {
-    user.value = u
-    if (import.meta.client) {
-      localStorage.setItem('tm_user', JSON.stringify(u))
-    }
-  }
+  const auth = getAuth();
 
-  // Clears session from both reactive state and localStorage
-  const logout = () => {
-    user.value = null
-    if (import.meta.client) {
-      localStorage.removeItem('tm_user')
-    }
-  }
-
-  // Restores session from localStorage on page load.
-  // Only runs on the client — localStorage is not available during SSR.
-  // Called by plugins/auth.client.js before any page mounts.
+  /**
+   * Initializes auth listener.
+   * Runs once on client startup via plugin.
+   */
   const initAuth = () => {
-    if (import.meta.client && !user.value) {
-      const stored = localStorage.getItem('tm_user')
-      if (stored) {
-        try {
-          user.value = JSON.parse(stored)
-        } catch {
-          // Corrupted data — clear it to avoid a broken session
-          localStorage.removeItem('tm_user')
-        }
-      }
-    }
-  }
+    if (!import.meta.client) return;
 
-  return { user, setUser, logout, initAuth }
-}
+    onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const token = await firebaseUser.getIdToken();
+
+        user.value = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          token // JWT for backend API calls
+        };
+      } else {
+        user.value = null;
+      }
+    });
+  };
+
+  /**
+   * Logout user from Firebase
+   */
+  const logout = async () => {
+    await signOut(auth);
+    user.value = null;
+  };
+
+  return {
+    user,
+    initAuth,
+    logout
+  };
+};
