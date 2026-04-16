@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DOMAIN="cloud-hopper.westeurope.cloudapp.azure.com"
+DOMAIN="onecloudaway.de"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 HTTPS_TEMPLATE="/etc/nginx/templates/https.conf.template"
 HTTPS_TARGET="/etc/nginx/conf.d/https.conf"
