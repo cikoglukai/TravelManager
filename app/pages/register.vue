@@ -8,8 +8,10 @@
 
     <div class="auth-card">
       <div class="auth-header">
-        <div class="auth-logo">✈</div>
-        <h1>TripManager</h1>
+        <div class="auth-logo">
+          <img :src="'/logo_banner.png'" alt="One Cloud Away" class="auth-logo-img" />
+        </div>
+        <h1>One Cloud Away</h1>
         <p>Your personal travel companion</p>
       </div>
 
@@ -153,16 +155,16 @@ async function register() {
   margin-bottom: 36px;
 }
 .auth-logo {
-  font-size: 2.2rem;
-  background: var(--navy);
-  color: var(--gold);
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
+}
+.auth-logo-img {
+  height: 60px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
 }
 .auth-header h1 {
   font-family: 'Playfair Display', serif;

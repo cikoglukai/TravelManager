@@ -42,6 +42,8 @@ services:
     build: .
     expose:
       - "3000"
+    ports:
+      - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/travelmanager
       - NITRO_HOST=0.0.0.0

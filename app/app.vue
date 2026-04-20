@@ -1,20 +1,41 @@
 <template>
   <div class="app">
     <nav v-if="hydrated && user" class="navbar">
+
+      <!-- Left: Hamburger -->
+      <div class="nav-left">
+        <button class="nav-hamburger" @click="menuOpen = !menuOpen" :class="{ open: menuOpen }" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      <!-- Center: Logo -->
       <NuxtLink to="/trips" class="nav-brand">
-        <span class="brand-icon">✈</span>
-        <span class="brand-text">TripManager</span>
+        <img :src="'/logo_banner.png'" alt="One Cloud Away" class="brand-logo" />
+        <span class="brand-text">One Cloud Away</span>
       </NuxtLink>
-      <div class="nav-links">
-        <NuxtLink to="/trips" class="nav-link">My Trips</NuxtLink>
-        <NuxtLink to="/trips/new" class="nav-btn-new">
-          <span>+</span> New Trip
-        </NuxtLink>
-        <span class="nav-user">
-          <span class="user-avatar">{{ user.name.charAt(0).toUpperCase() }}</span>
+
+      <!-- Right: Profile + Logout -->
+      <div class="nav-right">
+        <NuxtLink to="/profile" class="nav-user">
+          <span class="user-avatar">
+            <img v-if="user.avatar_url" :src="user.avatar_url" class="user-avatar-img" :alt="user.name" />
+            <template v-else>{{ user.name.charAt(0).toUpperCase() }}</template>
+          </span>
           {{ user.name }}
-        </span>
+        </NuxtLink>
         <button class="nav-btn-logout" @click="handleLogout">Logout</button>
+      </div>
+
+      <!-- Dropdown menu -->
+      <div v-if="menuOpen" class="nav-dropdown" @click="menuOpen = false">
+        <NuxtLink to="/trips" class="nav-dropdown-item">My Trips</NuxtLink>
+        <NuxtLink to="/community" class="nav-dropdown-item">Community</NuxtLink>
+        <NuxtLink to="/explore" class="nav-dropdown-item nav-dropdown-globe">🌍 Explore</NuxtLink>
+        <div class="nav-dropdown-divider"></div>
+        <NuxtLink to="/trips/new" class="nav-dropdown-item nav-dropdown-new">+ New Trip</NuxtLink>
       </div>
     </nav>
 
@@ -22,7 +43,7 @@
 
     <footer class="footer">
       <div class="footer-inner">
-        <span class="footer-brand">✈ TripManager</span>
+        <span class="footer-brand"><img :src="'/logo_banner.png'" alt="One Cloud Away" class="footer-logo" /> One Cloud Away</span>
         <span class="footer-divider">·</span>
         <span>Kai Cikoglu · Nina Karl · Johanna Prinz · Daniel Rill</span>
         <span class="footer-divider">·</span>
@@ -36,6 +57,7 @@
 const { user, logout } = useAuth()
 const router = useRouter()
 const hydrated = ref(false)
+const menuOpen = ref(false)
 
 onMounted(() => {
   hydrated.value = true
@@ -45,6 +67,10 @@ function handleLogout() {
   logout()
   router.push('/register')
 }
+
+// Close menu on route change
+const route = useRoute()
+watch(() => route.path, () => { menuOpen.value = false })
 </script>
 
 <style>
@@ -100,15 +126,99 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 2px 20px rgba(15,31,61,0.3);
 }
 
+/* Left side: hamburger */
+.nav-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* Right side: profile + logout */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* ── Hamburger button ── */
+.nav-hamburger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.nav-hamburger:hover { background: rgba(255,255,255,0.08); }
+.nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.25s;
+  transform-origin: center;
+}
+/* Animate to X when open */
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Dropdown ── */
+.nav-dropdown {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  background: var(--navy);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(15,31,61,0.35);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  z-index: 99;
+}
+.nav-dropdown-item {
+  padding: 13px 32px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.72);
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.02em;
+}
+.nav-dropdown-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--white);
+}
+.nav-dropdown-globe { color: var(--gold) !important; }
+.nav-dropdown-globe:hover { color: var(--gold-light) !important; }
+.nav-dropdown-new {
+  color: var(--gold) !important;
+  font-weight: 600;
+}
+.nav-dropdown-new:hover { color: var(--gold-light) !important; }
+.nav-dropdown-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 6px 0;
+}
+
 .nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   color: var(--white);
 }
-.brand-icon {
-  font-size: 1.3rem;
-  color: var(--gold);
+.brand-logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
 }
 .brand-text {
   font-family: 'Playfair Display', serif;
@@ -117,37 +227,6 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.02em;
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.nav-link {
-  color: rgba(255,255,255,0.72);
-  font-size: 0.9rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  transition: color 0.2s;
-}
-.nav-link:hover { color: var(--white); }
-
-.nav-btn-new {
-  background: var(--gold);
-  color: var(--navy) !important;
-  padding: 7px 18px;
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.88rem;
-  letter-spacing: 0.02em;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background 0.2s, transform 0.15s;
-}
-.nav-btn-new:hover {
-  background: var(--gold-light);
-  transform: translateY(-1px);
-}
 
 .nav-user {
   display: flex;
@@ -155,6 +234,14 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
   color: rgba(255,255,255,0.82);
   font-size: 0.88rem;
+  border-radius: 100px;
+  padding: 4px 10px 4px 4px;
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+.nav-user:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
 }
 .user-avatar {
   width: 30px;
@@ -167,6 +254,14 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   font-weight: 700;
   font-size: 0.82rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .nav-btn-logout {
@@ -440,6 +535,15 @@ a { color: inherit; text-decoration: none; }
   color: var(--gold);
   font-weight: 600;
   font-family: 'Playfair Display', serif;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.footer-logo {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.85;
 }
 .footer-divider { color: rgba(255,255,255,0.2); }
 .footer-tech { color: rgba(255,255,255,0.3); }
