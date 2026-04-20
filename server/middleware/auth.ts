@@ -2,13 +2,18 @@ import { defineEventHandler, getHeader, createError, H3Event } from "h3";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
-const app = initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!))
-});
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+const authClient = serviceAccount && serviceAccount !== "{}"
+    ? getAuth(initializeApp({ credential: cert(JSON.parse(serviceAccount)) }))
+    : null;
 
-const authClient = getAuth(app);
+if (!authClient) {
+    console.warn("[auth] FIREBASE_SERVICE_ACCOUNT is not set; skipping Firebase token verification");
+}
 
 export default defineEventHandler(async (event: H3Event) => {
+    if (!authClient) return;
+
     const authHeader = getHeader(event, "authorization");
 
     if (!authHeader) {

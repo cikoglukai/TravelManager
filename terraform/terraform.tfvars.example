@@ -1,0 +1,12 @@
+project_id  = "your-google-cloud-project-id"
+region      = "europe-west6"
+db_password = "replace-with-a-strong-password"
+
+# Optional overrides. The defaults already match GOOGLE_CLOUD_FULL_SETUP.md.
+# artifact_registry_repository_id = "travelmanager"
+# image_name                      = "app"
+# image_tag                       = "latest"
+# cloud_run_service_name          = "travelmanager"
+# cloud_sql_instance_name         = "travelmanager-postgres"
+# db_name                         = "travelmanager"
+# db_user                         = "travelmanager"

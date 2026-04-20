@@ -1,49 +1,65 @@
-// composables/useAuth.js
-//
-// Cloud-ready authentication composable using Firebase Auth.
-// Replaces localStorage-based fake session with real Identity Provider.
-
+import { getApps } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 
 export const useAuth = () => {
-  // Global reactive user state (shared across app)
   const user = useState("user", () => null);
 
-  const auth = getAuth();
+  const getFirebaseAuth = () => {
+    if (!import.meta.client || getApps().length === 0) return null;
+    return getAuth();
+  };
 
-  /**
-   * Initializes auth listener.
-   * Runs once on client startup via plugin.
-   */
+  const setUser = (nextUser) => {
+    user.value = nextUser;
+
+    if (!import.meta.client) return;
+    if (nextUser) {
+      localStorage.setItem("tm_user", JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem("tm_user");
+    }
+  };
+
   const initAuth = () => {
     if (!import.meta.client) return;
+
+    const storedUser = localStorage.getItem("tm_user");
+    if (storedUser && !user.value) {
+      try {
+        user.value = JSON.parse(storedUser);
+      } catch {
+        localStorage.removeItem("tm_user");
+      }
+    }
+
+    const auth = getFirebaseAuth();
+    if (!auth) return;
 
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
 
-        user.value = {
+        setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          token // JWT for backend API calls
-        };
+          token,
+        });
       } else {
-        user.value = null;
+        setUser(null);
       }
     });
   };
 
-  /**
-   * Logout user from Firebase
-   */
   const logout = async () => {
-    await signOut(auth);
-    user.value = null;
+    const auth = getFirebaseAuth();
+    if (auth) await signOut(auth);
+    setUser(null);
   };
 
   return {
     user,
+    setUser,
     initAuth,
-    logout
+    logout,
   };
 };

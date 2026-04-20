@@ -43,3 +43,10 @@ __screenshots__/
 
 # Env
 .env
+
+# Terraform local state and secrets
+terraform/.terraform/
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
