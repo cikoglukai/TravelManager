@@ -28,7 +28,7 @@ Traffic flow:
 
 1. A browser accesses the Azure VM through its public IP.
 2. Nginx receives the HTTP request on port `80`.
-3. Nginx forwards the request internally to the application container on port `3000`.
+3. Nginx forwards the request internally to the application container on port `8080`.
 4. The application connects to PostgreSQL over the internal Docker network.
 
 After setup and testing, the VM is stopped to reduce Azure compute costs.
@@ -171,7 +171,7 @@ docker compose logs postgres
 docker compose logs nginx
 ```
 
-The current repository exposes the application publicly through Nginx on port `80`. The application container itself is only exposed internally on port `3000`.
+The current repository exposes the application publicly through Nginx on port `80`. The application container itself listens internally on port `8080`.
 
 ## 8. Database Setup
 
@@ -337,13 +337,13 @@ The following repository files are directly relevant for deployment:
   Defines the three-service stack: `nginx`, `app`, and `postgres`, including restart policies and the persistent PostgreSQL volume.
 
 - `Dockerfile`  
-  Defines the application container image based on `node:22-alpine` and starts the application with `npm run dev`.
+  Defines the production application container image based on `node:22-alpine` and starts the built Nuxt/Nitro server.
 
 - `.env.example`  
   Provides the example `DATABASE_URL` used for local configuration and documentation of the expected environment variable format.
 
 - `nginx/default.conf`  
-  Defines the Nginx reverse proxy that listens on port `80` and forwards requests to `app:3000`.
+  Defines the Nginx reverse proxy that listens on port `80` and forwards requests to `app:8080`.
 
 - `server/utils/db.js`  
   Defines the PostgreSQL connection handling and the fallback/default connection string logic.
