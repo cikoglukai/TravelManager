@@ -1,10 +1,10 @@
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name cloud-hopper.westeurope.cloudapp.azure.com;
+    server_name onecloudaway.de www.onecloudaway.de;
 
-    ssl_certificate /etc/letsencrypt/live/cloud-hopper.westeurope.cloudapp.azure.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cloud-hopper.westeurope.cloudapp.azure.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/onecloudaway.de/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/onecloudaway.de/privkey.pem;
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:10m;
     ssl_session_tickets off;
@@ -26,9 +26,5 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header X-Forwarded-Proto $scheme;
-
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_cache_bypass $http_upgrade;
     }
 }

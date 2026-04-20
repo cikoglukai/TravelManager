@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   // Existing user → log in (name is ignored on login)
   const { rows: existing } = await db.query(
-    'SELECT id, name, email FROM users WHERE email = $1',
+    'SELECT id, name, email, bio, home_city, avatar_url, created_at FROM users WHERE email = $1',
     [cleanEmail]
   )
   if (existing.length) return existing[0]
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { rows } = await db.query(
-    'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email',
+    'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, bio, home_city, avatar_url, created_at',
     [name.trim(), cleanEmail]
   )
   return rows[0]
