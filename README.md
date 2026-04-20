@@ -159,6 +159,7 @@ The app is available at **http://localhost:3000**.
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/travelmanager` | PostgreSQL connection string |
 | `NITRO_HOST` | — | Set to `0.0.0.0` inside Docker to accept external connections |
+| `NITRO_PORT` | `8080` in Docker | Internal application container port |
 
 Copy `.env.example` to `.env` to override defaults locally.
 

@@ -5,7 +5,7 @@ This repository is prepared for a simple Docker Compose + Nginx + Certbot setup 
 ## Files used for HTTPS
 
 - `docker-compose.yml`: keeps `nginx` public on ports `80` and `443`, keeps `app` and `postgres` internal, and shares Let’s Encrypt volumes with a `certbot` helper container.
-- `nginx/default.conf`: serves `cloud-hopper.westeurope.cloudapp.azure.com` on HTTP, exposes the ACME challenge path, and proxies normal requests to `app:3000`.
+- `nginx/default.conf`: serves `onecloudaway.de` on HTTP, exposes the ACME challenge path, and proxies normal requests to `app:8080`.
 - `nginx/https.conf.template`: defines the HTTPS server block and points to the standard Let’s Encrypt certificate paths.
 - `nginx/99-enable-https.sh`: activates the HTTPS config only when the real certificate files already exist.
 
@@ -34,7 +34,8 @@ docker compose --profile certbot run --rm certbot certonly \
   --email your-email@example.com \
   --agree-tos \
   --no-eff-email \
-  -d cloud-hopper.westeurope.cloudapp.azure.com
+  -d onecloudaway.de \
+  -d www.onecloudaway.de
 ```
 
 Enable HTTPS in Nginx and reload it:
@@ -48,8 +49,8 @@ Verify the deployment:
 
 ```bash
 docker compose ps
-curl -I http://cloud-hopper.westeurope.cloudapp.azure.com
-curl -I https://cloud-hopper.westeurope.cloudapp.azure.com
+curl -I http://onecloudaway.de
+curl -I https://onecloudaway.de
 ```
 
 Optional certificate renewal command:
@@ -62,6 +63,6 @@ docker compose exec nginx nginx -s reload
 ## Azure and DNS prerequisites
 
 - Port `443/tcp` must be allowed in the Azure Network Security Group.
-- The DNS name `cloud-hopper.westeurope.cloudapp.azure.com` must already resolve to the VM public IP.
+- The DNS name `onecloudaway.de` must already resolve to the VM public IP.
 - The VM must be running when requesting or renewing certificates.
 - Let’s Encrypt HTTP validation requires port `80/tcp` to be reachable from the public internet.

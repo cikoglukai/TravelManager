@@ -1,0 +1,10 @@
+.git
+.idea
+.nuxt
+.output
+node_modules
+npm-debug.log*
+Dockerfile
+docker-compose.yml
+DEPLOYMENT_*.md
+README.md
