@@ -34,7 +34,7 @@ Org-Policy blockt Service-Account-Keys. Stattdessen ADC via gcloud:
 
 ```bash
 gcloud auth application-default login
-gcloud config set project project-59d9fc88-ac5c-43c3-894
+gcloud config set project <dein-project-id>
 ```
 
 Browser öffnet → Google-Login → "Authenticated".
@@ -43,9 +43,9 @@ Browser öffnet → Google-Login → "Authenticated".
 
 ```bash
 cat > .env <<'EOF'
-FIREBASE_API_KEY=AIzaSyB1dqBMWe6rtZ_p2flZbOMSH8RJRYnK7Pc
+FIREBASE_API_KEY=<dein-NUXT_PUBLIC_FIREBASE_API_KEY-aus-app/.env>
 FIREBASE_SERVICE_ACCOUNT_PATH=
-NUXT_PUBLIC_FIREBASE_PROJECT_ID=project-59d9fc88-ac5c-43c3-894
+NUXT_PUBLIC_FIREBASE_PROJECT_ID=<dein-firebase-project-id>
 TEST_USER_COUNT=50
 TEST_USER_PASSWORD=LoadTest!2026
 TEST_USER_EMAIL_DOMAIN=travelmanager.test
@@ -53,7 +53,7 @@ TEST_USER_EMAIL_DOMAIN=travelmanager.test
 LOCUST_HOST=http://localhost:3000
 
 TARGET_LOCAL=http://localhost:3000
-TARGET_CLOUD_RUN=https://travelmanager-343958666277.europe-west6.run.app
+TARGET_CLOUD_RUN=https://<dein-cloud-run-host>
 TARGET_GCE=
 EOF
 ```
@@ -93,7 +93,7 @@ Vor dem Lasttest sicherstellen, dass das Target lebt:
 curl http://localhost:3000/api/trips/all
 
 # Cloud Run
-curl https://travelmanager-343958666277.europe-west6.run.app/api/trips/all
+curl https://<dein-cloud-run-host>/api/trips/all
 
 # GCE VM
 curl http://<VM_PUBLIC_IP>/api/trips/all
@@ -112,7 +112,7 @@ cd tests/load
 source .venv/bin/activate
 
 # Target via --host wählen:
-locust -f locustfile.py --host https://travelmanager-343958666277.europe-west6.run.app
+locust -f locustfile.py --host https://<dein-cloud-run-host>
 ```
 
 Browser: **http://localhost:8089**
