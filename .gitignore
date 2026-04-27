@@ -49,6 +49,9 @@ skills-lock.json
 # Env
 .env
 
+# Local-dev compose override (re-adds gcloud ADC mount for laptop devs)
+docker-compose.override.yml
+
 # Terraform local state and secrets
 terraform/.terraform/
 terraform/terraform.tfvars

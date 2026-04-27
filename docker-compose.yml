@@ -52,9 +52,8 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/travelmanager
       - NITRO_HOST=0.0.0.0
       - NITRO_PORT=8080
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-    volumes:
-      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    # Cloud Run / GCE: firebase-admin uses the runtime service account via the
+    # metadata server — no file mount needed.
     depends_on:
       postgres:
         condition: service_healthy
