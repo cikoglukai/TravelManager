@@ -3,6 +3,7 @@
 import { getDb } from '~~/server/utils/db.js'
 
 export default defineEventHandler(async (event) => {
+  const user = event.context.user
   const tripId = Number(getRouterParam(event, 'tripId'))
   if (!tripId) throw createError({ statusCode: 400, statusMessage: 'Invalid trip ID' })
 
@@ -16,6 +17,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = getDb()
+
+  const { rows: ownerRows } = await db.query(
+    'SELECT 1 FROM trips WHERE id = $1 AND user_uid = $2',
+    [tripId, user.uid]
+  )
+  if (!ownerRows.length) throw createError({ statusCode: 403, statusMessage: 'Not your trip' })
 
   // Assign next position
   const { rows: [{ max }] } = await db.query(
