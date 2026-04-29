@@ -23,11 +23,23 @@ export const useAuth = () => {
   const _hydrateProfile = async (fbUser) => {
     const token = await fbUser.getIdToken()
     try {
-      const profile = await $fetch('/api/users/me', {
+      user.value = await $fetch('/api/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      user.value = profile
-    } catch {
+    } catch (err) {
+      // /api/users/me 404 → SQL row missing (e.g. DB wiped while Firebase
+      // session still cached). Upsert it so subsequent FK-bound writes
+      // (trips, reviews, …) succeed.
+      if (err?.status === 404 || err?.statusCode === 404) {
+        try {
+          user.value = await $fetch('/api/users', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: { name: fbUser.displayName ?? fbUser.email },
+          })
+          return
+        } catch { /* fall through to stub */ }
+      }
       user.value = {
         firebase_uid: fbUser.uid,
         email: fbUser.email,
@@ -47,26 +59,31 @@ export const useAuth = () => {
       body: { name },
     })
     user.value = profile
+    authReady.value = true
   }
 
   const signInEmail = async (email, password) => {
     const auth = getAuth()
-    await signInWithEmailAndPassword(auth, email, password)
-    // onAuthStateChanged handles hydration
+    const { user: fbUser } = await signInWithEmailAndPassword(auth, email, password)
+    // Hydrate synchronously so the caller's navigateTo() runs against a
+    // populated user.value — otherwise the global auth middleware sees
+    // user.value === null and bounces back to /register.
+    await _hydrateProfile(fbUser)
+    authReady.value = true
   }
 
   const signInGoogle = async () => {
     const auth = getAuth()
     const provider = new GoogleAuthProvider()
     const result = await signInWithPopup(auth, provider)
-    // Upsert Postgres row on first Google login
     const token = await result.user.getIdToken()
     await $fetch('/api/users', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: { name: result.user.displayName ?? result.user.email },
     })
-    // onAuthStateChanged handles hydration
+    await _hydrateProfile(result.user)
+    authReady.value = true
   }
 
   const setUser = (nextUser) => {
@@ -93,6 +110,19 @@ export const useAuth = () => {
     user.value = null
   }
 
+  // Resolves once `onAuthStateChanged` has fired at least once.
+  // Use before any guard like `if (!user.value) return navigateTo('/register')`
+  // to avoid a hydration race where the Firebase session is restored from
+  // IndexedDB after the page's onMounted has already run.
+  const waitAuthReady = () => {
+    if (!import.meta.client || authReady.value) return Promise.resolve()
+    return new Promise((resolve) => {
+      const stop = watch(authReady, (ready) => {
+        if (ready) { stop(); resolve() }
+      })
+    })
+  }
+
   return {
     user,
     authReady,
@@ -102,5 +132,6 @@ export const useAuth = () => {
     signInGoogle,
     initAuth,
     logout,
+    waitAuthReady,
   }
 }

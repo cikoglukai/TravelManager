@@ -64,13 +64,19 @@
           </button>
         </div>
 
-        <div v-if="user && !isOwner && !hasLiked" class="like-comment-input">
+        <div v-if="user && !isOwner" class="like-comment-input">
           <input
             v-model="myLikeComment"
             type="text"
             maxlength="200"
-            placeholder="Add a comment with your like… (optional)"
+            :placeholder="hasLiked ? 'Edit your comment…' : 'Add a comment with your like… (optional)'"
           />
+          <button
+            v-if="hasLiked"
+            class="btn-save-comment"
+            :disabled="likeLoading || myLikeComment === existingLikeComment"
+            @click="saveLikeComment"
+          >Save</button>
         </div>
 
         <Transition name="form-slide">
@@ -212,7 +218,7 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
 const route = useRoute()
 const router = useRouter()
@@ -237,8 +243,14 @@ const myLikeComment  = ref('')
 const isOwner  = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
 const myReview = computed(() => reviews.value.find(r => r.reviewer_id === user.value?.firebase_uid) ?? null)
 const hasLiked = computed(() => user.value ? likes.value.likedUserIds.includes(user.value.firebase_uid) : false)
+const existingLikeComment = computed(() => {
+  if (!user.value) return ''
+  const mine = likes.value.comments.find(c => c.userId === user.value.firebase_uid)
+  return mine?.comment ?? ''
+})
 
 onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   await fetchTrip()
   await Promise.all([fetchPlan(), fetchReviews(), fetchLikes()])
@@ -269,6 +281,8 @@ async function fetchLikes() {
   } catch {
     likes.value = { count: 0, comments: [], likedUserIds: [] }
   }
+  // Pre-fill input with the user's stored comment so they can edit it.
+  if (hasLiked.value) myLikeComment.value = existingLikeComment.value
 }
 
 async function toggleLike() {
@@ -287,6 +301,22 @@ async function toggleLike() {
     await fetchLikes()
   } catch (err) {
     alert(err.data?.statusMessage || 'Could not update like')
+  } finally {
+    likeLoading.value = false
+  }
+}
+
+async function saveLikeComment() {
+  if (!user.value) return navigateTo('/register')
+  likeLoading.value = true
+  try {
+    await apiFetch(`/api/likes/trip/${route.params.id}`, {
+      method: 'POST',
+      body: { comment: myLikeComment.value },
+    })
+    await fetchLikes()
+  } catch (err) {
+    alert(err.data?.statusMessage || 'Could not save comment')
   } finally {
     likeLoading.value = false
   }
@@ -324,7 +354,7 @@ async function deleteMyReview() {
   if (!confirm('Delete your review?')) return
   submitting.value = true
   try {
-    await apiFetch(`/api/reviews/${myReview.value.id}`, { method: 'DELETE' })
+    await apiFetch(`/api/reviews/trip/${route.params.id}`, { method: 'DELETE' })
     formStars.value   = 0
     formComment.value = ''
     await fetchReviews()
@@ -604,9 +634,12 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
 
 .like-comment-input {
   margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
 }
 .like-comment-input input {
-  width: 100%;
+  flex: 1;
   padding: 9px 14px;
   border: 1.5px solid var(--sand-dark);
   border-radius: 8px;
@@ -621,6 +654,18 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
   border-color: var(--gold);
   background: var(--white);
 }
+.btn-save-comment {
+  padding: 0 16px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.btn-save-comment:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .like-comments-list {
   display: flex;

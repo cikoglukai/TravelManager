@@ -167,7 +167,7 @@
 
 <script setup>
 import { getStorage, ref as storageRef, deleteObject } from 'firebase/storage'
-const { user, setUser } = useAuth()
+const { user, setUser, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
 const { uploadImage } = useImageUpload()
 
@@ -176,6 +176,7 @@ const trips   = ref([])
 const pending = ref(true)
 
 onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   const uid = user.value.firebase_uid
   try {

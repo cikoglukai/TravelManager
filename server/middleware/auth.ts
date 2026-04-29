@@ -37,7 +37,10 @@ try {
 }
 
 export default defineEventHandler(async (event: H3Event) => {
-  const path = event.path ?? "";
+  // event.path includes the query string ("/api/trips/all?q=paris"); strip it
+  // before matching anchored regexes in PUBLIC_PATTERNS.
+  const rawPath = event.path ?? "";
+  const path = rawPath.split("?")[0];
 
   if (!path.startsWith("/api/")) return; // Nuxt page routes: always pass through
   if (isPublicRoute(path, event.method)) return;

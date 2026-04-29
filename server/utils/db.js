@@ -19,18 +19,21 @@ export function getDb() {
 export async function initDb() {
   const pool = getDb()
 
-  // Drop and recreate the user-data tables so firebase_uid becomes the PK.
-  // Destinations, routes, transport_options, accommodation_options are preserved.
-  await pool.query(`
-    DROP TABLE IF EXISTS travel_plans    CASCADE;
-    DROP TABLE IF EXISTS reviews         CASCADE;
-    DROP TABLE IF EXISTS plan_locations  CASCADE;
-    DROP TABLE IF EXISTS trips           CASCADE;
-    DROP TABLE IF EXISTS users           CASCADE;
-  `)
+  // Idempotent schema bootstrap. Tables persist across container restarts
+  // (postgres_data volume). DROP only when SCHEMA_RESET=1 (destructive — wipes
+  // all user data).
+  if (process.env.SCHEMA_RESET === '1') {
+    await pool.query(`
+      DROP TABLE IF EXISTS travel_plans    CASCADE;
+      DROP TABLE IF EXISTS reviews         CASCADE;
+      DROP TABLE IF EXISTS plan_locations  CASCADE;
+      DROP TABLE IF EXISTS trips           CASCADE;
+      DROP TABLE IF EXISTS users           CASCADE;
+    `)
+  }
 
   await pool.query(`
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
       firebase_uid TEXT        PRIMARY KEY,
       email        TEXT        NOT NULL UNIQUE,
       name         TEXT        NOT NULL,
@@ -40,7 +43,7 @@ export async function initDb() {
       created_at   TIMESTAMPTZ DEFAULT NOW()
     );
 
-    CREATE TABLE trips (
+    CREATE TABLE IF NOT EXISTS trips (
       id                  SERIAL      PRIMARY KEY,
       user_uid            TEXT        NOT NULL REFERENCES users(firebase_uid) ON DELETE CASCADE,
       title               TEXT        NOT NULL,
@@ -51,7 +54,7 @@ export async function initDb() {
       created_at          TIMESTAMPTZ DEFAULT NOW()
     );
 
-    CREATE TABLE plan_locations (
+    CREATE TABLE IF NOT EXISTS plan_locations (
       id          SERIAL      PRIMARY KEY,
       trip_id     INTEGER     NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
       name        TEXT        NOT NULL,
@@ -63,16 +66,20 @@ export async function initDb() {
       created_at  TIMESTAMPTZ DEFAULT NOW()
     );
 
-    CREATE TABLE reviews (
+    -- Review comments live in Firestore (collection: reviews/{tripId}/users/{reviewerUid}).
+    CREATE TABLE IF NOT EXISTS reviews (
       id          SERIAL      PRIMARY KEY,
       trip_id     INTEGER     NOT NULL REFERENCES trips(id)             ON DELETE CASCADE,
       reviewer_id TEXT        NOT NULL REFERENCES users(firebase_uid)   ON DELETE CASCADE,
       stars       INTEGER     NOT NULL CHECK (stars BETWEEN 1 AND 5),
-      comment     TEXT        NOT NULL DEFAULT '',
       created_at  TIMESTAMPTZ DEFAULT NOW(),
       updated_at  TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(trip_id, reviewer_id)
     );
+
+    -- Older deploys created reviews with a NOT NULL comment column. Drop it
+    -- if present so existing volumes line up with the Firestore-backed schema.
+    ALTER TABLE reviews DROP COLUMN IF EXISTS comment;
   `)
 
   // Static lookup tables — created only if they do not already exist

@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
 const router = useRouter()
 
@@ -43,6 +43,7 @@ const trips = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   try {
     trips.value = await apiFetch('/api/trips')

@@ -541,6 +541,77 @@ Comparison axes: p50/p95/p99 latency, error rate, Cloud Run cold-start visibilit
 
 ---
 
+## Slide 18b — Deploy + load-test runbook (live commands)
+
+Full reference: [`DEPLOY_AND_LOADTEST.md`](./DEPLOY_AND_LOADTEST.md). Condensed sequence:
+
+**Deploy to Cloud Run**
+
+```bash
+./scripts/deploy-cloud-run-paas.sh
+```
+
+Script orchestrates: `gcloud config` → `terraform init/validate` → bootstrap
+Artifact Registry → `docker buildx --platform linux/amd64 --push` → full
+`terraform apply` → `gcloud run services update` (forced rollout) → print URL.
+
+Resulting URL (Firebase-authorized domain):
+`https://travelmanager-343958666277.europe-west6.run.app`
+
+**Smoke**
+
+```bash
+URL="https://travelmanager-343958666277.europe-west6.run.app"
+curl -sI "$URL"                                    # 200
+curl -s "$URL/api/destinations" | jq 'length'      # 15
+```
+
+**Seed test data** (Firebase users + trips, idempotent)
+
+```bash
+cd tests/load && source .venv/bin/activate
+echo "TARGET_CLOUD_RUN=$URL" >> .env
+python seed_users.py                               # 50 accounts → seeded_users.json
+python seed_trips.py --count 3 --target "$URL"     # 150 trips
+```
+
+**Workload shapes (Ex5)**
+
+```bash
+# Flat baseline (Ex3 comparison)
+locust -f locustfile.py --host "$URL" --users 20 --spawn-rate 5 --run-time 1m \
+  --headless --html reports/smoke_cloudrun.html --csv reports/smoke_cloudrun
+
+# Periodic — 4 cycles of 20→100→20, 16 min, exercises autoscaler cooldown
+LOCUST_SHAPE=periodic locust -f locustfile.py --host "$URL" \
+  --headless --run-time 17m --html reports/periodic_cloudrun.html
+
+# Spike — baseline 10 → burst 500 → recovery, ~6 min, cold-start surface
+LOCUST_SHAPE=spike    locust -f locustfile.py --host "$URL" \
+  --headless --run-time 6m  --html reports/spike_cloudrun.html
+```
+
+**Compare three targets in one shot**
+
+```bash
+./run_compare.sh _ _ _ periodic     # iterates TARGET_LOCAL / TARGET_GCE / TARGET_CLOUD_RUN
+./run_compare.sh _ _ _ spike
+```
+
+Reports land in `tests/load/reports/<target>_<shape>_<ts>/`. Numbers fill the
+`<TBD>` cells in [`tests/load/reports/REPORT.md`](./tests/load/reports/REPORT.md)
+Section 5 — Results.
+
+**Cleanup**
+
+```bash
+python seed_trips.py --cleanup --target "$URL"
+python seed_users.py --cleanup
+cd terraform && terraform destroy   # full teardown
+```
+
+---
+
 ## Slide 19 — Lessons learned + next steps
 
 **Lessons**
@@ -586,6 +657,8 @@ Comparison axes: p50/p95/p99 latency, error rate, Cloud Run cold-start visibilit
 - `CloudRun.md` — PaaS architecture + Firebase
 - `FIREBASE_AUTH_PLAN.md` — auth design notes
 - `LOCUST_SETUP.md` — load test setup
+- `DEPLOY_AND_LOADTEST.md` — deploy + load-test command runbook
+- `tests/load/reports/REPORT.md` — Ex5 test protocol template
 - `IMPLEMENTATION.md`, `IMPLEMENTATION_PLAN.md` — story breakdown
 - `terraform/` — all IaC; `scripts/deploy-cloud-run-paas.sh` — one-shot deploy
 

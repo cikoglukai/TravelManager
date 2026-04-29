@@ -30,6 +30,20 @@ python seed_users.py --cleanup  # deletes them all
 
 Idempotent — re-running is safe.
 
+## Seed test trips (one-shot per target)
+
+Browsing scenario reads `/api/trips/all`; without trips the response is empty and
+results are not representative. Run after `seed_users.py`:
+
+```bash
+python seed_trips.py --count 3 --target $TARGET_LOCAL    # 3 trips/user
+python seed_trips.py --cleanup --target $TARGET_LOCAL    # remove them
+```
+
+Trips are titled `Seed Trip NNN — <city>` so they are easy to recognise and
+prune. Re-running first deletes prior seed trips per user, so the configured
+count is exact.
+
 ## Run
 
 Interactive UI:
@@ -38,17 +52,31 @@ locust -f locustfile.py --host http://localhost:3000
 # open http://localhost:8089
 ```
 
-Headless:
+Headless flat profile:
 ```bash
 locust -f locustfile.py --host $TARGET \
   --users 100 --spawn-rate 10 --run-time 5m \
   --headless --html reports/run.html --csv reports/run
 ```
 
-Compare all three targets with identical load profile:
+Workload shapes (Ex5):
 ```bash
-./run_compare.sh 100 10 5m   # users, spawn-rate, run-time
-# reports land in reports/<target>_<timestamp>/
+LOCUST_SHAPE=periodic locust -f locustfile.py --host $TARGET \
+  --headless --html reports/periodic.html --csv reports/periodic
+LOCUST_SHAPE=spike    locust -f locustfile.py --host $TARGET \
+  --headless --html reports/spike.html    --csv reports/spike
+```
+
+`periodic` runs 16 min — 4 cycles ramping 20→100→20 users, exercises
+autoscaling cooldown.
+`spike` runs ~5 min 30 — flat baseline, sudden burst to 500 users, recovery —
+exercises cold-start / scale-out under sudden demand.
+
+Compare all configured targets with one command:
+```bash
+./run_compare.sh 100 10 5m flat       # default; reports in reports/<target>_flat_<ts>/
+./run_compare.sh _ _ _ periodic       # shape ignores users/spawn args
+./run_compare.sh _ _ _ spike
 ```
 
 ## User classes

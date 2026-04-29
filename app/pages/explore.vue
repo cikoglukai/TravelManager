@@ -126,11 +126,12 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
 const router   = useRouter()
 
-onMounted(() => {
+onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) navigateTo('/register')
 })
 

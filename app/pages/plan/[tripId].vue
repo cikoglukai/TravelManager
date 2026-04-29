@@ -337,7 +337,7 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
 const route    = useRoute()
 const router   = useRouter()
@@ -345,7 +345,8 @@ const router   = useRouter()
 const tripId = Number(route.params.tripId)
 
 // ── Auth guard ───────────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) navigateTo('/register')
 })
 
@@ -356,6 +357,10 @@ const loadingTrip = ref(true)
 onMounted(async () => {
   try {
     trip.value = await apiFetch(`/api/trips/${tripId}`)
+    await waitAuthReady()
+    if (!user.value || trip.value.user_uid !== user.value.firebase_uid) {
+      return router.replace(`/trips/${tripId}`)
+    }
   } catch {
     router.push('/trips')
   } finally {
