@@ -3,6 +3,7 @@
 import { getDb } from '~~/server/utils/db.js'
 
 export default defineEventHandler(async (event) => {
+  const user = event.context.user
   const tripId = Number(getRouterParam(event, 'tripId'))
   if (!tripId) throw createError({ statusCode: 400, statusMessage: 'Invalid trip ID' })
 
@@ -13,6 +14,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = getDb()
+
+  const { rows: ownerRows } = await db.query(
+    'SELECT 1 FROM trips WHERE id = $1 AND user_uid = $2',
+    [tripId, user.uid]
+  )
+  if (!ownerRows.length) throw createError({ statusCode: 403, statusMessage: 'Not your trip' })
+
   const { rows } = await db.query(
     `INSERT INTO travel_plans
        (trip_id, destination_id, route_id, transport_option_id, accommodation_option_id, notes)

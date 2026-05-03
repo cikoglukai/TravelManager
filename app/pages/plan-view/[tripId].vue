@@ -5,7 +5,7 @@
     <div class="pv-topbar no-print">
       <NuxtLink :to="`/trips/${tripId}`" class="btn btn-back">← Back to Trip</NuxtLink>
       <div class="pv-topbar-actions">
-        <NuxtLink :to="`/plan/${tripId}`" class="btn btn-outline">✏ Edit Plan</NuxtLink>
+        <NuxtLink v-if="isOwner" :to="`/plan/${tripId}`" class="btn btn-outline">✏ Edit Plan</NuxtLink>
         <button class="btn btn-secondary" @click="printPlan">🖨 Print</button>
       </div>
     </div>
@@ -16,7 +16,7 @@
     <!-- ── No plan yet ── -->
     <div v-else-if="!plan" class="empty-state">
       <p style="margin-bottom:16px">No travel plan created for this trip yet.</p>
-      <NuxtLink :to="`/plan/${tripId}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
+      <NuxtLink v-if="isOwner" :to="`/plan/${tripId}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
     </div>
 
     <!-- ── Plan document ── -->
@@ -198,20 +198,33 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
+const { apiFetch } = useApiFetch()
 const route    = useRoute()
 const tripId   = Number(route.params.tripId)
 
-onMounted(() => { if (!user.value) navigateTo('/register') })
+const tripData = ref(null)
+const planData = ref(null)
+const pending  = ref(true)
 
-// ── Fetch trip + plan in parallel ────────────────────────────────────────────
-const [{ data: tripData }, { data: planData, pending }] = await Promise.all([
-  useFetch(() => `/api/trips/${tripId}`,          { key: `pv-trip-${tripId}` }),
-  useFetch(() => `/api/travel-plans/${tripId}`,   { key: `pv-plan-${tripId}` }),
-])
+onMounted(async () => {
+  await waitAuthReady()
+  if (!user.value) return navigateTo('/register')
+  try {
+    const [t, p] = await Promise.allSettled([
+      apiFetch(`/api/trips/${tripId}`),
+      apiFetch(`/api/travel-plans/${tripId}`),
+    ])
+    if (t.status === 'fulfilled') tripData.value = t.value
+    if (p.status === 'fulfilled') planData.value = p.value
+  } finally {
+    pending.value = false
+  }
+})
 
 const trip = computed(() => tripData.value)
 const plan = computed(() => planData.value?.country ? planData.value : null)
+const isOwner = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
 
 // ── Derived data ─────────────────────────────────────────────────────────────
 const highlightsList = computed(() =>

@@ -71,7 +71,7 @@
 <script setup>
 const props = defineProps({ trip: { type: Object, default: null } })
 const emit = defineEmits(['saved', 'cancelled'])
-const { user } = useAuth()
+const { apiFetch } = useApiFetch()
 
 const isEdit = computed(() => !!props.trip)
 const error = ref('')
@@ -91,9 +91,9 @@ async function handleSubmit() {
   try {
     let result
     if (isEdit.value) {
-      result = await $fetch(`/api/trips/${props.trip.id}`, { method: 'PUT', body: { ...form } })
+      result = await apiFetch(`/api/trips/${props.trip.id}`, { method: 'PUT', body: { ...form } })
     } else {
-      result = await $fetch('/api/trips', { method: 'POST', body: { ...form, user_id: user.value.id } })
+      result = await apiFetch('/api/trips', { method: 'POST', body: { ...form } })
     }
     emit('saved', result)
   } catch (err) {

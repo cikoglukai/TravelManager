@@ -121,6 +121,12 @@ resource "google_project_iam_member" "cloud_run_sql_client" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
+resource "google_project_iam_member" "cloud_run_firestore" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
 resource "google_secret_manager_secret_iam_member" "database_url_accessor" {
   project   = var.project_id
   secret_id = google_secret_manager_secret.database_url.id
@@ -175,6 +181,36 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
+      env {
+        name  = "NUXT_PUBLIC_FIREBASE_API_KEY"
+        value = var.firebase_api_key
+      }
+
+      env {
+        name  = "NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN"
+        value = var.firebase_auth_domain
+      }
+
+      env {
+        name  = "NUXT_PUBLIC_FIREBASE_PROJECT_ID"
+        value = var.firebase_project_id
+      }
+
+      env {
+        name  = "NUXT_PUBLIC_FIREBASE_APP_ID"
+        value = var.firebase_app_id
+      }
+
+      env {
+        name  = "NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET"
+        value = var.firebase_storage_bucket
+      }
+
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.firebase_project_id
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
@@ -195,6 +231,7 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [
     google_artifact_registry_repository.docker,
     google_project_iam_member.cloud_run_sql_client,
+    google_project_iam_member.cloud_run_firestore,
     google_secret_manager_secret_iam_member.database_url_accessor,
     google_secret_manager_secret_version.database_url,
     google_project_service.required["run.googleapis.com"],

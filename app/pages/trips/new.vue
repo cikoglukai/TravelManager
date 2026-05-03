@@ -9,7 +9,10 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
-onMounted(() => { if (!user.value) navigateTo('/register') })
+const { user, waitAuthReady } = useAuth()
+onMounted(async () => {
+  await waitAuthReady()
+  if (!user.value) navigateTo('/register')
+})
 function onSaved(trip) { navigateTo(`/trips/${trip.id}`) }
 </script>

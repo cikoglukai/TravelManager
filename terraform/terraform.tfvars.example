@@ -10,3 +10,10 @@ db_password = "replace-with-a-strong-password"
 # cloud_sql_instance_name         = "travelmanager-postgres"
 # db_name                         = "travelmanager"
 # db_user                         = "travelmanager"
+
+# ── Firebase ───────────────────────────────────────────────────────────────────
+firebase_api_key        = "your-firebase-web-api-key"
+firebase_auth_domain    = "your-project.firebaseapp.com"
+firebase_project_id     = "your-gcp-project-id"
+firebase_app_id         = "1:123456789:web:abcdef"
+firebase_storage_bucket = "your-project.firebasestorage.app"

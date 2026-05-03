@@ -48,6 +48,12 @@ IMAGE_TAG="${IMAGE_TAG:-$(tfvar image_tag)}"
 CLOUD_RUN_SERVICE="${CLOUD_RUN_SERVICE:-$(tfvar cloud_run_service_name)}"
 DB_PASSWORD="$(tfvar db_password)"
 
+FIREBASE_API_KEY="${FIREBASE_API_KEY:-$(tfvar firebase_api_key)}"
+FIREBASE_AUTH_DOMAIN="${FIREBASE_AUTH_DOMAIN:-$(tfvar firebase_auth_domain)}"
+FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-$(tfvar firebase_project_id)}"
+FIREBASE_APP_ID="${FIREBASE_APP_ID:-$(tfvar firebase_app_id)}"
+FIREBASE_STORAGE_BUCKET="${FIREBASE_STORAGE_BUCKET:-$(tfvar firebase_storage_bucket)}"
+
 REGION="${REGION:-europe-west6}"
 AR_REPO="${AR_REPO:-travelmanager}"
 IMAGE_NAME="${IMAGE_NAME:-app}"
@@ -67,9 +73,9 @@ fi
 IMAGE_URI="${IMAGE_URI:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}}"
 DOCKER_HOSTNAME="${REGION}-docker.pkg.dev"
 
-TF_APPLY_ARGS=()
+TF_EXTRA_ARGS=""
 if [ "${AUTO_APPROVE:-0}" = "1" ]; then
-  TF_APPLY_ARGS+=("-auto-approve")
+  TF_EXTRA_ARGS="-auto-approve"
 fi
 
 echo "Project:      $PROJECT_ID"
@@ -92,7 +98,7 @@ terraform validate
 
 echo
 echo "Bootstrapping Artifact Registry..."
-terraform apply -target=google_artifact_registry_repository.docker "${TF_APPLY_ARGS[@]}"
+terraform apply -target=google_artifact_registry_repository.docker $TF_EXTRA_ARGS
 
 echo
 echo "Authenticating Docker to Artifact Registry..."
@@ -110,15 +116,16 @@ docker buildx build \
 echo
 echo "Applying Terraform infrastructure..."
 cd "$TF_DIR"
-terraform apply "${TF_APPLY_ARGS[@]}"
+terraform apply $TF_EXTRA_ARGS
 
 if [ "${FORCE_ROLLOUT:-1}" = "1" ]; then
   echo
-  echo "Forcing Cloud Run rollout for image tag..."
+  echo "Forcing Cloud Run rollout for image tag and Firebase env vars..."
   gcloud run services update "$CLOUD_RUN_SERVICE" \
     --image "$IMAGE_URI" \
     --region "$REGION" \
-    --project "$PROJECT_ID"
+    --project "$PROJECT_ID" \
+    --set-env-vars "NUXT_PUBLIC_FIREBASE_API_KEY=${FIREBASE_API_KEY},NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN},NUXT_PUBLIC_FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID},NUXT_PUBLIC_FIREBASE_APP_ID=${FIREBASE_APP_ID},NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET},GOOGLE_CLOUD_PROJECT=${FIREBASE_PROJECT_ID}"
 fi
 
 echo

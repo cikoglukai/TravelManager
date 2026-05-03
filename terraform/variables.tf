@@ -116,3 +116,33 @@ variable "database_url_secret_id" {
   type        = string
   default     = "travelmanager-database-url"
 }
+
+variable "firebase_storage_bucket" {
+  description = "Firebase Storage bucket (NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET), e.g. your-project.firebasestorage.app"
+  type        = string
+  default     = ""
+}
+
+variable "firebase_api_key" {
+  description = "Firebase web API key (NUXT_PUBLIC_FIREBASE_API_KEY)."
+  type        = string
+  default     = ""
+}
+
+variable "firebase_auth_domain" {
+  description = "Firebase auth domain, e.g. your-project.firebaseapp.com."
+  type        = string
+  default     = ""
+}
+
+variable "firebase_project_id" {
+  description = "Firebase/GCP project ID (NUXT_PUBLIC_FIREBASE_PROJECT_ID)."
+  type        = string
+  default     = ""
+}
+
+variable "firebase_app_id" {
+  description = "Firebase web app ID (NUXT_PUBLIC_FIREBASE_APP_ID)."
+  type        = string
+  default     = ""
+}

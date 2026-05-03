@@ -2,7 +2,19 @@
   <div class="page-wrapper">
     <div class="page-header">
       <h2>Community Trips</h2>
-      <NuxtLink to="/trips/new" class="btn btn-gold">+ New Trip</NuxtLink>
+      <div class="page-header-right">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Search trips…"
+            class="search-input"
+            @input="onSearchInput"
+          />
+        </div>
+        <NuxtLink v-if="user" to="/trips/new" class="btn btn-gold">+ New Trip</NuxtLink>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -10,9 +22,9 @@
       <p>Loading trips…</p>
     </div>
 
-    <div v-else-if="filtered.length" class="trip-grid">
+    <div v-else-if="trips.length" class="trip-grid">
       <NuxtLink
-        v-for="trip in filtered"
+        v-for="trip in trips"
         :key="trip.id"
         :to="`/trips/${trip.id}`"
         class="trip-card"
@@ -31,23 +43,49 @@
     </div>
 
     <div v-else class="loading-state">
-      <p>No trips found yet. Be the first to create one!</p>
-      <NuxtLink to="/trips/new" class="btn btn-gold" style="margin-top:16px">Create Trip</NuxtLink>
+      <p v-if="debouncedSearch">No trips match "{{ debouncedSearch }}".</p>
+      <p v-else>No trips found yet. Be the first to create one!</p>
+      <NuxtLink v-if="user" to="/trips/new" class="btn btn-gold" style="margin-top:16px">Create Trip</NuxtLink>
     </div>
   </div>
 </template>
 
 <script setup>
 const { user } = useAuth()
+const { apiFetch } = useApiFetch()
 
-onMounted(() => {
-  if (!user.value) navigateTo('/register')
-})
+const searchQuery     = ref('')
+const debouncedSearch = ref('')
+let debounceTimer = null
 
-const { data, pending } = await useFetch('/api/trips/all', { key: 'community-trips' })
+function onSearchInput() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedSearch.value = searchQuery.value
+  }, 350)
+}
 
-const loading = computed(() => pending.value)
-const filtered = computed(() => data.value ?? [])
+const tripsData = ref([])
+const loading   = ref(false)
+
+async function fetchTrips() {
+  loading.value = true
+  try {
+    const url = debouncedSearch.value
+      ? `/api/trips/all?q=${encodeURIComponent(debouncedSearch.value)}`
+      : '/api/trips/all'
+    tripsData.value = await apiFetch(url)
+  } catch {
+    tripsData.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchTrips)
+watch(debouncedSearch, fetchTrips)
+
+const trips = computed(() => tripsData.value)
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-US', {
@@ -57,6 +95,41 @@ function formatDate(d) {
 </script>
 
 <style scoped>
+.page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-bar {
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.search-input {
+  padding: 9px 16px 9px 36px;
+  border: 2px solid var(--sand-dark);
+  border-radius: 100px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  background: var(--white);
+  color: var(--text);
+  width: 220px;
+  transition: border-color 0.2s, width 0.2s;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  width: 280px;
+}
+
 .loading-state {
   background: var(--white);
   border-radius: var(--radius);
@@ -100,5 +173,11 @@ function formatDate(d) {
   font-size: 0.65rem;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .page-header-right { gap: 8px; }
+  .search-input { width: 160px; }
+  .search-input:focus { width: 200px; }
 }
 </style>

@@ -138,3 +138,51 @@ FIREBASE_PRIVATE_KEY=
 npm run build
 node .output/server/index.mjs
 ```
+
+---
+
+## Firebase Setup (required for Auth)
+
+### 1. Create Firebase project
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → link to the same GCP project as your Cloud Run service.
+2. In **Authentication → Sign-in method**, enable:
+   - **Email/Password**
+   - **Google** (set your project support email)
+
+### 2. Register a web app
+
+1. Firebase Console → Project Settings → **Your apps** → **Add app** → Web.
+2. Copy the config object — extract these four values into your `.env` / terraform vars:
+   ```
+   NUXT_PUBLIC_FIREBASE_API_KEY
+   NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+   NUXT_PUBLIC_FIREBASE_PROJECT_ID
+   NUXT_PUBLIC_FIREBASE_APP_ID
+   ```
+
+### 3. Authorized domains
+
+Firebase Console → Authentication → Settings → **Authorized domains** → **Add domain**:
+- `localhost` (for local dev)
+- Your Cloud Run URL, e.g. `your-service-abc123-ew.a.run.app`
+
+### 4. Service account (Admin SDK)
+
+1. Firebase Console → Project Settings → **Service accounts** → **Generate new private key** → download JSON.
+2. Minify to one line and store in Secret Manager:
+   ```sh
+   gcloud secrets create travelmanager-firebase-service-account \
+     --data-file=firebase-service-account.json \
+     --project=YOUR_PROJECT_ID
+   ```
+3. Grant the Cloud Run service account access:
+   ```sh
+   gcloud secrets add-iam-policy-binding travelmanager-firebase-service-account \
+     --member="serviceAccount:YOUR_CLOUD_RUN_SA@YOUR_PROJECT.iam.gserviceaccount.com" \
+     --role="roles/secretmanager.secretAccessor"
+   ```
+
+### 5. Deploy
+
+Run `scripts/deploy-cloud-run-paas.sh` — it sets `NUXT_PUBLIC_FIREBASE_*` via `--set-env-vars` and `FIREBASE_SERVICE_ACCOUNT` via Secret Manager mount in `main.tf`.

@@ -337,14 +337,16 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
+const { apiFetch } = useApiFetch()
 const route    = useRoute()
 const router   = useRouter()
 
 const tripId = Number(route.params.tripId)
 
 // ── Auth guard ───────────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) navigateTo('/register')
 })
 
@@ -354,7 +356,11 @@ const loadingTrip = ref(true)
 
 onMounted(async () => {
   try {
-    trip.value = await $fetch(`/api/trips/${tripId}`)
+    trip.value = await apiFetch(`/api/trips/${tripId}`)
+    await waitAuthReady()
+    if (!user.value || trip.value.user_uid !== user.value.firebase_uid) {
+      return router.replace(`/trips/${tripId}`)
+    }
   } catch {
     router.push('/trips')
   } finally {
@@ -383,7 +389,7 @@ const destinations  = ref([])
 const loadingDest   = ref(true)
 
 onMounted(async () => {
-  destinations.value = await $fetch('/api/destinations')
+  destinations.value = await apiFetch('/api/destinations')
   loadingDest.value  = false
 
   // ── Pre-select from ?destId (coming from the Explore globe page) ──────────
@@ -412,7 +418,7 @@ watch(() => sel.destination, async (dest) => {
   if (!dest) return
   loadingRoutes.value = true
   try {
-    routes.value = await $fetch(`/api/destinations/${dest.id}/routes`)
+    routes.value = await apiFetch(`/api/destinations/${dest.id}/routes`)
   } finally {
     loadingRoutes.value = false
   }
@@ -429,7 +435,7 @@ const existingPlan = ref(null)
 
 onMounted(async () => {
   try {
-    const plan = await $fetch(`/api/travel-plans/${tripId}`)
+    const plan = await apiFetch(`/api/travel-plans/${tripId}`)
     existingPlan.value = plan
     notes.value = plan.notes ?? ''
     // Pre-load the destination and fetch its routes so we can restore selections
@@ -446,7 +452,7 @@ async function selectAndLoadDestination(dest, plan) {
   sel.destination = dest
   loadingRoutes.value = true
   try {
-    routes.value = await $fetch(`/api/destinations/${dest.id}/routes`)
+    routes.value = await apiFetch(`/api/destinations/${dest.id}/routes`)
     const r = routes.value.find(r => r.id === plan.route_id)
     if (r) {
       sel.route         = r
@@ -473,7 +479,7 @@ async function savePlan() {
   saveError.value = ''
   saving.value    = true
   try {
-    await $fetch(`/api/travel-plans/${tripId}`, {
+    await apiFetch(`/api/travel-plans/${tripId}`, {
       method: 'POST',
       body: {
         destination_id:          sel.destination.id,
