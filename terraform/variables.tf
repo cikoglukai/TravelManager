@@ -4,9 +4,15 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "Google Cloud region for Artifact Registry, Cloud SQL, and Cloud Run."
+  description = "Google Cloud region for Artifact Registry and Cloud SQL (data plane)."
   type        = string
   default     = "europe-west1"
+}
+
+variable "cloud_run_region" {
+  description = "Region for Cloud Run service and serverless NEG."
+  type        = string
+  default     = "europe-west3"
 }
 
 variable "artifact_registry_repository_id" {

@@ -137,7 +137,7 @@ resource "google_secret_manager_secret_iam_member" "database_url_accessor" {
 resource "google_cloud_run_v2_service" "app" {
   project  = var.project_id
   name     = var.cloud_run_service_name
-  location = var.region
+  location = var.cloud_run_region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
@@ -249,8 +249,8 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 resource "google_compute_region_network_endpoint_group" "frankfurt_neg" {
   name                  = "frankfurt-neg"
   network_endpoint_type = "SERVERLESS"
-  region                = "europe-west3"
+  region                = var.cloud_run_region
   cloud_run {
-    service = google_cloud_run_v2_service.app.name # "app" statt "travelmanager"
+    service = google_cloud_run_v2_service.app.name
   }
 }
