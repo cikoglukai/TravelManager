@@ -2,24 +2,32 @@
 
 Stages:
   0–60s    baseline 10 users
-  60–90s   ramp 10 → 500 (spike)
-  90–210s  hold 500
-  210–270s drop 500 → 10
+  60–90s   ramp 10 → PEAK (spike)
+  90–210s  hold PEAK
+  210–270s drop PEAK → 10
   270–330s baseline 10 users
 Total: 5min 30s.
+
+Peak overridable via SPIKE_PEAK env var (default 500). Spawn rate scales with peak.
 """
 from __future__ import annotations
+
+import os
 
 from locust import LoadTestShape
 
 
+_PEAK = int(os.environ.get("SPIKE_PEAK", "500"))
+_SPAWN = max(50, _PEAK // 10)
+
+
 class SpikeShape(LoadTestShape):
     stages = [
-        {"end": 60,  "users": 10,  "spawn_rate": 5},
-        {"end": 90,  "users": 500, "spawn_rate": 50},
-        {"end": 210, "users": 500, "spawn_rate": 50},
-        {"end": 270, "users": 10,  "spawn_rate": 50},
-        {"end": 330, "users": 10,  "spawn_rate": 5},
+        {"end": 60,  "users": 10,    "spawn_rate": 5},
+        {"end": 90,  "users": _PEAK, "spawn_rate": _SPAWN},
+        {"end": 210, "users": _PEAK, "spawn_rate": _SPAWN},
+        {"end": 270, "users": 10,    "spawn_rate": _SPAWN},
+        {"end": 330, "users": 10,    "spawn_rate": 5},
     ]
 
     def tick(self):

@@ -79,6 +79,49 @@ Compare all configured targets with one command:
 ./run_compare.sh _ _ _ spike
 ```
 
+## Stress runs (peak 2000 users)
+
+Both `spike` and `periodic` shapes accept env-var overrides for peak (defaults
+keep Ex5 reproducibility):
+- `SPIKE_PEAK=2000`     — spike burst peak
+- `PERIODIC_PEAK=2000`  — periodic cycle peak (trough still 20)
+
+Run sequentially, not in parallel — single Mac client tops near 2k sockets, and
+running both simultaneously masks server-side limits with client CPU contention.
+
+### Spike — 2000 peak
+
+IaaS:
+```bash
+cd tests/load && source .venv/bin/activate && python seed_trips.py --count 3 --target https://onecloudaway.de && ulimit -n 65535 && SPIKE_PEAK=2000 LOCUST_SHAPE=spike locust -f locustfile.py --host https://onecloudaway.de --headless --run-time 6m --html reports/stress2000_iaas.html --csv reports/stress2000_iaas --logfile reports/stress2000_iaas.log --loglevel INFO
+```
+
+PaaS (Cloud Run):
+```bash
+cd tests/load && source .venv/bin/activate && python seed_trips.py --count 3 --target https://travelmanager-343958666277.europe-west6.run.app && ulimit -n 65535 && SPIKE_PEAK=2000 LOCUST_SHAPE=spike locust -f locustfile.py --host https://travelmanager-343958666277.europe-west6.run.app --headless --run-time 6m --html reports/stress2000_cloudrun.html --csv reports/stress2000_cloudrun --logfile reports/stress2000_cloudrun.log --loglevel INFO
+```
+
+### Periodic — 2000 peak (4 cycles × 240s, ~17min)
+
+IaaS:
+```bash
+cd tests/load && source .venv/bin/activate && ulimit -n 65535 && PERIODIC_PEAK=2000 LOCUST_SHAPE=periodic locust -f locustfile.py --host https://onecloudaway.de --headless --run-time 17m --html reports/periodic2000_iaas.html --csv reports/periodic2000_iaas --logfile reports/periodic2000_iaas.log --loglevel INFO
+```
+
+PaaS (Cloud Run):
+```bash
+cd tests/load && source .venv/bin/activate && ulimit -n 65535 && PERIODIC_PEAK=2000 LOCUST_SHAPE=periodic locust -f locustfile.py --host https://travelmanager-343958666277.europe-west6.run.app --headless --run-time 17m --html reports/periodic2000_cloudrun.html --csv reports/periodic2000_cloudrun --logfile reports/periodic2000_cloudrun.log --loglevel INFO
+```
+
+Caveats:
+- `ulimit -n 65535` raises Mac socket cap; without it `Too many open files` mid-run
+- Firebase REST sign-in IP rate-limit may trigger above ~1500 concurrent VUs;
+  manifests as `SSLEOFError` / `ReadTimeout` against `identitytoolkit.googleapis.com`
+  in logs (client-side, not app-side)
+- IaaS = single VM ceiling, expect TCP RST + `RemoteDisconnected` on auth-write
+  endpoints near peak. PaaS = expect TLS handshake resets during cold-start
+  scale-out, then steady once instances warm
+
 ## User classes
 
 - `BrowsingUser` (weight=3) — anonymous, hits public endpoints (`/api/trips/all`, `/api/destinations`, `GET /api/likes/trip/:id`)

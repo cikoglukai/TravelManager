@@ -2,8 +2,13 @@
 
 Four cycles of: ramp up → hold high → ramp down → hold low.
 Each cycle: 4 minutes. Total run: 16 minutes.
+
+Peak/trough overridable via PERIODIC_PEAK / PERIODIC_TROUGH env vars
+(defaults: 100 / 20). Spawn rate scales with peak.
 """
 from __future__ import annotations
+
+import os
 
 from locust import LoadTestShape
 
@@ -13,9 +18,9 @@ class PeriodicShape(LoadTestShape):
 
     cycle_duration = 240  # 4 min per cycle
     cycles = 4
-    peak_users = 100
-    trough_users = 20
-    spawn_rate = 10
+    peak_users = int(os.environ.get("PERIODIC_PEAK", "100"))
+    trough_users = int(os.environ.get("PERIODIC_TROUGH", "20"))
+    spawn_rate = max(10, peak_users // 10)
 
     def tick(self):
         run_time = self.get_run_time()
