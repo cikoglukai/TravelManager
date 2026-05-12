@@ -79,6 +79,13 @@
             </div>
           </div>
 
+          <!-- Live offers (Booking + Skyscanner via RapidAPI) -->
+          <LiveOffers
+            :tabs="user?.home_city ? ['flights', 'buses', 'hotels'] : ['hotels']"
+            :origin="user?.home_city || ''"
+            :destination="selected.city"
+          />
+
           <!-- Trip creation CTA -->
           <div class="panel-cta">
             <template v-if="!creating">

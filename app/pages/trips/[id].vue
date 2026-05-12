@@ -26,6 +26,7 @@
         <div class="trip-detail-header">
           <h1>{{ trip.title }}</h1>
           <div class="trip-detail-meta">
+            <span v-if="trip.origin" class="badge badge-dest">🛫 {{ trip.origin }}</span>
             <span class="badge badge-dest">📍 {{ trip.destination }}</span>
             <span class="badge badge-date">📅 {{ formatDate(trip.start_date) }}</span>
           </div>
@@ -142,6 +143,15 @@
         <p v-else class="reviews-empty">No reviews yet. Be the first to share your thoughts!</p>
       </div>
 
+      <!-- ── Live Offers section ── -->
+      <div class="live-offers-section">
+        <LiveOffers
+          :origin="trip.origin"
+          :destination="trip.destination"
+          :date-from="trip.start_date"
+        />
+      </div>
+
       <!-- ── Travel Plan section ── -->
       <div class="plan-section">
         <div class="plan-section-header">
@@ -155,7 +165,7 @@
             <NuxtLink v-if="travelPlan" :to="`/plan-view/${trip.id}`" class="btn btn-gold">
               View Full Plan →
             </NuxtLink>
-            <NuxtLink v-if="isOwner" :to="`/plan/${trip.id}`" class="btn btn-outline">
+            <NuxtLink v-if="isOwner" :to="planEditLink" class="btn btn-outline">
               {{ travelPlan ? '✏ Edit' : '+ Create Plan' }}
             </NuxtLink>
           </div>
@@ -208,8 +218,8 @@
           <p v-if="isOwner">No travel plan yet. Choose from 15 European destinations with pre-suggested routes, transport and accommodation options.</p>
           <p v-else>No travel plan has been created for this trip yet.</p>
           <div v-if="isOwner" class="plan-empty-actions">
-            <NuxtLink :to="`/plan/${trip.id}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
-            <NuxtLink to="/explore" class="btn btn-outline">🌍 Explore on Globe</NuxtLink>
+            <NuxtLink :to="`/plan/${trip.id}?mode=custom`" class="btn btn-gold">Create My Own Plan</NuxtLink>
+            <NuxtLink to="/explore" class="btn btn-outline">🌍 Pick from Globe</NuxtLink>
           </div>
         </div>
       </div>
@@ -223,12 +233,38 @@ const { apiFetch } = useApiFetch()
 const route = useRoute()
 const router = useRouter()
 
-const trip         = ref(null)
-const loading      = ref(true)
-const editing      = ref(false)
-const deleting     = ref(false)
-const travelPlan   = ref(null)
-const deletingPlan = ref(false)
+const trip             = ref(null)
+const loading          = ref(true)
+const editing          = ref(false)
+const deleting         = ref(false)
+const travelPlanData   = ref(null)
+const deletingPlan     = ref(false)
+
+// Normalize custom plans to the same field names the markup uses for template
+// plans, so the summary block doesn't need separate branches.
+const travelPlan = computed(() => {
+  const p = travelPlanData.value
+  if (!p) return null
+  if (p.mode === 'custom') {
+    return {
+      ...p,
+      emoji:               '📍',
+      country:             p.custom_destination || trip.value?.destination || 'Custom trip',
+      city:                '',
+      route_name:          p.custom_route_name,
+      duration_days:       p.custom_duration_days ?? 0,
+      transport_type:      p.custom_transport_type,
+      provider:            p.custom_transport_provider,
+      transport_duration:  p.custom_transport_duration,
+      price_from:          p.custom_transport_price_from ?? 0,
+      accommodation_type:  p.custom_accommodation_type,
+      accommodation_name:  p.custom_accommodation_name,
+      price_per_night:     p.custom_accommodation_price_per_night ?? 0,
+      rating:              p.custom_accommodation_rating ?? 0,
+    }
+  }
+  return p
+})
 
 const reviews     = ref([])
 const formStars   = ref(0)
@@ -242,6 +278,16 @@ const myLikeComment  = ref('')
 
 const isOwner  = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
 const myReview = computed(() => reviews.value.find(r => r.reviewer_id === user.value?.firebase_uid) ?? null)
+
+// Edit link routes the user back to the wizard. For brand-new plans we default
+// to the custom flow (own-trip path). Existing plans drop the query — the
+// plan page re-reads `mode` from the saved row.
+const planEditLink = computed(() => {
+  if (!trip.value) return ''
+  return travelPlan.value
+    ? `/plan/${trip.value.id}`
+    : `/plan/${trip.value.id}?mode=custom`
+})
 const hasLiked = computed(() => user.value ? likes.value.likedUserIds.includes(user.value.firebase_uid) : false)
 const existingLikeComment = computed(() => {
   if (!user.value) return ''
@@ -269,9 +315,9 @@ async function fetchTrip() {
 
 async function fetchPlan() {
   try {
-    travelPlan.value = await apiFetch(`/api/travel-plans/${route.params.id}`)
+    travelPlanData.value = await apiFetch(`/api/travel-plans/${route.params.id}`)
   } catch {
-    travelPlan.value = null
+    travelPlanData.value = null
   }
 }
 
@@ -387,7 +433,7 @@ async function deletePlan() {
   deletingPlan.value = true
   try {
     await apiFetch(`/api/travel-plans/${trip.value.id}`, { method: 'DELETE' })
-    travelPlan.value = null
+    travelPlanData.value = null
   } catch (err) {
     alert(err.data?.statusMessage || 'Could not remove plan')
   } finally {
@@ -409,6 +455,14 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
 .detail-actions {
   display: flex;
   gap: 12px;
+}
+
+.live-offers-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px 36px;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
 }
 
 /* ── Travel Plan section ── */

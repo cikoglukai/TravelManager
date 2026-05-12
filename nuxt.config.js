@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   runtimeConfig: {
+    rapidApiKey: process.env.RAPIDAPI_KEY ?? '',
     public: {
       firebase: {
         apiKey:            process.env.NUXT_PUBLIC_FIREBASE_API_KEY          ?? '',

@@ -38,8 +38,8 @@
         </div>
       </div>
 
-      <!-- ── Step 1: Destination ── -->
-      <div v-if="step === 1" class="wizard-step">
+      <!-- ── Step 1: Destination (template mode only) ── -->
+      <div v-if="step === 1 && planMode === 'template'" class="wizard-step">
         <div class="step-heading-row">
           <div>
             <h3 class="step-heading">Choose your destination</h3>
@@ -100,8 +100,8 @@
         </div>
       </div>
 
-      <!-- ── Step 2: Route ── -->
-      <div v-if="step === 2" class="wizard-step">
+      <!-- ── Step 2: Route (template mode) ── -->
+      <div v-if="step === 2 && planMode === 'template'" class="wizard-step">
         <div class="step-context">
           <span class="step-context-flag">{{ sel.destination?.emoji }}</span>
           <strong>{{ sel.destination?.country }}</strong>
@@ -143,8 +143,8 @@
         </div>
       </div>
 
-      <!-- ── Step 3: Transport ── -->
-      <div v-if="step === 3" class="wizard-step">
+      <!-- ── Step 3: Transport (template mode) ── -->
+      <div v-if="step === 3 && planMode === 'template'" class="wizard-step">
         <div class="step-context">
           <span class="step-context-flag">{{ sel.destination?.emoji }}</span>
           <strong>{{ sel.route?.name }}</strong>
@@ -176,6 +176,13 @@
           </button>
         </div>
 
+        <LiveOffers
+          :tabs="['flights', 'buses']"
+          :origin="trip?.origin"
+          :destination="sel.destination?.city || sel.destination?.country"
+          :date-from="trip?.start_date"
+        />
+
         <div class="wizard-nav">
           <button class="btn btn-secondary" @click="step = 2">← Route</button>
           <button class="btn btn-gold" :disabled="!sel.transport" @click="step = 4">
@@ -184,8 +191,8 @@
         </div>
       </div>
 
-      <!-- ── Step 4: Accommodation ── -->
-      <div v-if="step === 4" class="wizard-step">
+      <!-- ── Step 4: Accommodation (template mode) ── -->
+      <div v-if="step === 4 && planMode === 'template'" class="wizard-step">
         <div class="step-context">
           <span class="step-context-flag">{{ sel.destination?.emoji }}</span>
           <strong>{{ sel.route?.name }}</strong>
@@ -218,6 +225,12 @@
           </button>
         </div>
 
+        <LiveOffers
+          :tabs="['hotels']"
+          :destination="sel.destination?.city || sel.destination?.country"
+          :date-from="trip?.start_date"
+        />
+
         <div class="wizard-nav">
           <button class="btn btn-secondary" @click="step = 3">← Transport</button>
           <button class="btn btn-gold" :disabled="!sel.accommodation" @click="step = 5">
@@ -226,8 +239,8 @@
         </div>
       </div>
 
-      <!-- ── Step 5: Review ── -->
-      <div v-if="step === 5" class="wizard-step">
+      <!-- ── Step 5: Review (template mode) ── -->
+      <div v-if="step === 5 && planMode === 'template'" class="wizard-step">
         <h3 class="step-heading">Review your travel plan</h3>
         <p class="step-hint">Everything looks right? Add any personal notes and save.</p>
 
@@ -325,6 +338,266 @@
         </div>
       </div>
 
+      <!-- ════════════════ CUSTOM-MODE STEPS ════════════════ -->
+
+      <!-- ── Custom Step 1: Route details ── -->
+      <div v-if="step === 1 && planMode === 'custom'" class="wizard-step">
+        <div v-if="trip?.destination" class="step-context">
+          <span class="step-context-flag">📍</span>
+          <strong>{{ trip.destination }}</strong>
+        </div>
+        <h3 class="step-heading">Describe your route</h3>
+        <p class="step-hint">Outline your itinerary — how long, where you'll go, what makes it special.</p>
+
+        <div class="custom-form">
+          <div class="cf-row">
+            <label>Route name *</label>
+            <input v-model="custom.route_name" type="text" placeholder='e.g. "Norwegian Fjords Loop"' />
+          </div>
+          <div class="cf-row">
+            <label>Short description</label>
+            <textarea v-model="custom.route_description" rows="2"
+              placeholder="A line or two about the journey." />
+          </div>
+          <div class="cf-row">
+            <label>Duration (days) *</label>
+            <input v-model.number="custom.duration_days" type="number" min="1" max="365" placeholder="7" />
+          </div>
+          <div class="cf-row">
+            <label>Highlights</label>
+            <input v-model="custom.highlights" type="text"
+              placeholder="Comma-separated, e.g. Bergen, Geirangerfjord, Trollstigen" />
+            <span class="cf-hint">Comma-separated list of stops or experiences.</span>
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <span></span>
+          <button class="btn btn-gold" :disabled="!customRouteValid" @click="step = 2">
+            Next: Transport →
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Custom Step 2: Transport ── -->
+      <div v-if="step === 2 && planMode === 'custom'" class="wizard-step">
+        <div class="step-context">
+          <span class="step-context-flag">📍</span>
+          <strong>{{ custom.route_name }}</strong>
+          <span class="step-context-sep">·</span>
+          <span>{{ custom.duration_days }} days</span>
+        </div>
+        <h3 class="step-heading">How are you getting there?</h3>
+        <p class="step-hint">Pick a transport type and add the details you have.</p>
+
+        <div class="custom-type-row">
+          <button
+            v-for="t in TRANSPORT_TYPES" :key="t"
+            class="type-pill" :class="{ 'type-pill--active': custom.transport_type === t }"
+            @click="custom.transport_type = t"
+          >
+            {{ transportIcon(t) }} {{ t }}
+          </button>
+        </div>
+
+        <LiveOffers
+          selectable
+          :tabs="['flights', 'buses', 'hotels']"
+          :default-tab="custom.transport_type === 'bus' ? 'buses' : 'flights'"
+          :origin="trip?.origin"
+          :destination="trip?.destination"
+          :date-from="trip?.start_date"
+          @select="onTransportPanelSelect"
+        />
+
+        <div class="custom-form">
+          <div class="cf-row">
+            <label>Provider / carrier</label>
+            <input v-model="custom.transport_provider" type="text"
+              placeholder='e.g. "Lufthansa", "Eurostar", "Self-drive"' />
+          </div>
+          <div class="cf-row cf-row--split">
+            <div>
+              <label>Duration</label>
+              <input v-model="custom.transport_duration" type="text" placeholder="e.g. 2h 30m" />
+            </div>
+            <div>
+              <label>Price from (€)</label>
+              <input v-model.number="custom.transport_price_from" type="number" min="0" placeholder="120" />
+            </div>
+          </div>
+          <div class="cf-row">
+            <label>Notes</label>
+            <textarea v-model="custom.transport_notes" rows="2"
+              placeholder="Booking ref, departure, anything to remember." />
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-secondary" @click="step = 1">← Route</button>
+          <button class="btn btn-gold" :disabled="!customTransportValid" @click="step = 3">
+            Next: Accommodation →
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Custom Step 3: Accommodation ── -->
+      <div v-if="step === 3 && planMode === 'custom'" class="wizard-step">
+        <div class="step-context">
+          <span class="step-context-flag">📍</span>
+          <strong>{{ custom.route_name }}</strong>
+          <span class="step-context-sep">·</span>
+          <span>{{ transportIcon(custom.transport_type) }} {{ custom.transport_type }}</span>
+        </div>
+        <h3 class="step-heading">Where will you stay?</h3>
+        <p class="step-hint">Hotel, hostel, apartment — describe your accommodation.</p>
+
+        <div class="custom-type-row">
+          <button
+            v-for="t in ACCOMMODATION_TYPES" :key="t"
+            class="type-pill" :class="{ 'type-pill--active': custom.accommodation_type === t }"
+            @click="custom.accommodation_type = t"
+          >
+            {{ accommodationIcon(t) }} {{ t }}
+          </button>
+        </div>
+
+        <LiveOffers
+          selectable
+          :tabs="['flights', 'buses', 'hotels']"
+          default-tab="hotels"
+          :origin="trip?.origin"
+          :destination="trip?.destination"
+          :date-from="trip?.start_date"
+          @select="onAccommodationPanelSelect"
+        />
+
+        <div class="custom-form">
+          <div class="cf-row">
+            <label>Name *</label>
+            <input v-model="custom.accommodation_name" type="text"
+              placeholder='e.g. "Hotel Bristol", "Mountain Hostel"' />
+          </div>
+          <div class="cf-row cf-row--split">
+            <div>
+              <label>Price per night (€)</label>
+              <input v-model.number="custom.accommodation_price_per_night" type="number" min="0" placeholder="95" />
+            </div>
+            <div>
+              <label>Rating (1-5)</label>
+              <select v-model="custom.accommodation_rating">
+                <option value="">—</option>
+                <option v-for="n in 5" :key="n" :value="n">{{ '★'.repeat(n) }} {{ n }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="cf-row">
+            <label>Notes</label>
+            <textarea v-model="custom.accommodation_notes" rows="2"
+              placeholder="Address, check-in time, breakfast included…" />
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-secondary" @click="step = 2">← Transport</button>
+          <button class="btn btn-gold" :disabled="!customAccomValid" @click="step = 4">
+            Review & Save →
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Custom Step 4: Review ── -->
+      <div v-if="step === 4 && planMode === 'custom'" class="wizard-step">
+        <h3 class="step-heading">Review your travel plan</h3>
+        <p class="step-hint">Everything looks right? Add any personal notes and save.</p>
+
+        <div class="review-card">
+          <div class="review-section review-trip">
+            <span class="review-label">Trip</span>
+            <div class="review-value review-trip-title">{{ trip?.title }}</div>
+            <div class="review-meta">
+              <span class="badge badge-dest">📍 {{ trip?.destination }}</span>
+              <span class="badge badge-date">📅 {{ trip?.start_date }}</span>
+            </div>
+          </div>
+
+          <div class="review-divider"></div>
+
+          <div class="review-grid">
+            <div class="review-section">
+              <span class="review-label">Route</span>
+              <div class="review-value">{{ custom.route_name }}</div>
+              <div class="review-sub">{{ custom.duration_days }} days</div>
+            </div>
+            <div class="review-section">
+              <span class="review-label">Description</span>
+              <div class="review-sub">{{ custom.route_description || '—' }}</div>
+            </div>
+          </div>
+
+          <div class="review-divider"></div>
+
+          <div class="review-grid">
+            <div class="review-section">
+              <span class="review-label">Transport</span>
+              <div class="review-value">
+                {{ transportIcon(custom.transport_type) }} {{ custom.transport_provider || custom.transport_type }}
+              </div>
+              <div class="review-sub">
+                {{ custom.transport_duration || '—' }}
+                <template v-if="custom.transport_price_from"> · From €{{ custom.transport_price_from }}</template>
+              </div>
+            </div>
+            <div class="review-section">
+              <span class="review-label">Accommodation</span>
+              <div class="review-value">
+                {{ accommodationIcon(custom.accommodation_type) }} {{ custom.accommodation_name }}
+              </div>
+              <div class="review-sub">
+                <template v-if="custom.accommodation_price_per_night">€{{ custom.accommodation_price_per_night }}/night</template>
+                <template v-if="custom.accommodation_rating"> · {{ starRating(custom.accommodation_rating) }} {{ custom.accommodation_rating }}</template>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="custom.highlights" class="review-divider"></div>
+          <div v-if="custom.highlights" class="review-section">
+            <span class="review-label">Highlights</span>
+            <div class="review-highlights">
+              <span v-for="h in custom.highlights.split(',')" :key="h" class="highlight-tag">
+                {{ h.trim() }}
+              </span>
+            </div>
+          </div>
+
+          <div class="review-divider"></div>
+
+          <div class="review-section">
+            <label class="review-label" for="plan-notes-custom">
+              Personal Notes
+              <span class="char-count">{{ notes.length }}/1000</span>
+            </label>
+            <textarea
+              id="plan-notes-custom"
+              v-model="notes"
+              rows="4"
+              maxlength="1000"
+              placeholder="Any personal notes, reminders or custom details for this plan…"
+              class="plan-notes-input"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-error" v-if="saveError">{{ saveError }}</div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-secondary" @click="step = 3">← Accommodation</button>
+          <button class="btn btn-gold" :disabled="saving" @click="savePlan">
+            {{ saving ? 'Saving…' : existingPlan ? '✓ Update Plan' : '✓ Save Travel Plan' }}
+          </button>
+        </div>
+      </div>
+
       <!-- ── Existing plan summary (shown after save) ── -->
       <div v-if="savedConfirm" class="saved-confirm">
         <div class="confirm-icon">✓</div>
@@ -356,8 +629,8 @@ const loadingTrip = ref(true)
 
 onMounted(async () => {
   try {
-    trip.value = await apiFetch(`/api/trips/${tripId}`)
     await waitAuthReady()
+    trip.value = await apiFetch(`/api/trips/${tripId}`)
     if (!user.value || trip.value.user_uid !== user.value.firebase_uid) {
       return router.replace(`/trips/${tripId}`)
     }
@@ -369,14 +642,23 @@ onMounted(async () => {
 })
 
 // ── Wizard state ─────────────────────────────────────────────────────────────
-const STEPS    = ['Destination', 'Route', 'Transport', 'Accommodation', 'Review']
+// Two plan modes share this page:
+//   - 'template': pick from seeded globe destinations → routes → options
+//   - 'custom':   user fills route/transport/accommodation free-form
+const planMode = ref(route.query.mode === 'custom' ? 'custom' : 'template')
+
+const STEPS_TEMPLATE = ['Destination', 'Route', 'Transport', 'Accommodation', 'Review']
+const STEPS_CUSTOM   = ['Route', 'Transport', 'Accommodation', 'Review']
+const STEPS = computed(() => planMode.value === 'custom' ? STEPS_CUSTOM : STEPS_TEMPLATE)
+
 const step     = ref(1)
-const viewMode = ref('globe')   // 'globe' | 'grid'
+const viewMode = ref('globe')   // 'globe' | 'grid' — template mode only
 const notes    = ref('')
 const saving       = ref(false)
 const saveError    = ref('')
 const savedConfirm = ref(false)
 
+// Template-mode selections
 const sel = reactive({
   destination:   null,
   route:         null,
@@ -384,11 +666,38 @@ const sel = reactive({
   accommodation: null,
 })
 
+// Custom-mode free-form fields
+const custom = reactive({
+  route_name: '',
+  route_description: '',
+  duration_days: '',
+  highlights: '',
+  transport_type: '',
+  transport_provider: '',
+  transport_duration: '',
+  transport_price_from: '',
+  transport_notes: '',
+  accommodation_type: '',
+  accommodation_name: '',
+  accommodation_price_per_night: '',
+  accommodation_rating: '',
+  accommodation_notes: '',
+})
+
+const TRANSPORT_TYPES     = ['flight', 'train', 'bus', 'car', 'ferry']
+const ACCOMMODATION_TYPES = ['hotel', 'hostel', 'apartment', 'guesthouse', 'camping']
+
 // ── Destinations ─────────────────────────────────────────────────────────────
 const destinations  = ref([])
 const loadingDest   = ref(true)
 
 onMounted(async () => {
+  // Custom plans skip the globe — no need to load template destinations.
+  if (planMode.value === 'custom') {
+    loadingDest.value = false
+    return
+  }
+
   destinations.value = await apiFetch('/api/destinations')
   loadingDest.value  = false
 
@@ -435,13 +744,32 @@ const existingPlan = ref(null)
 
 onMounted(async () => {
   try {
+    await waitAuthReady()
     const plan = await apiFetch(`/api/travel-plans/${tripId}`)
     existingPlan.value = plan
     notes.value = plan.notes ?? ''
-    // Pre-load the destination and fetch its routes so we can restore selections
-    const dest = destinations.value.find(d => d.id === plan.destination_id)
-    if (dest) {
-      await selectAndLoadDestination(dest, plan)
+    if (plan.mode === 'custom') {
+      planMode.value = 'custom'
+      custom.route_name                    = plan.custom_route_name                    ?? ''
+      custom.route_description             = plan.custom_route_description             ?? ''
+      custom.duration_days                 = plan.custom_duration_days                 ?? ''
+      custom.highlights                    = plan.custom_highlights                    ?? ''
+      custom.transport_type                = plan.custom_transport_type                ?? ''
+      custom.transport_provider            = plan.custom_transport_provider            ?? ''
+      custom.transport_duration            = plan.custom_transport_duration            ?? ''
+      custom.transport_price_from          = plan.custom_transport_price_from          ?? ''
+      custom.transport_notes               = plan.custom_transport_notes               ?? ''
+      custom.accommodation_type            = plan.custom_accommodation_type            ?? ''
+      custom.accommodation_name            = plan.custom_accommodation_name            ?? ''
+      custom.accommodation_price_per_night = plan.custom_accommodation_price_per_night ?? ''
+      custom.accommodation_rating          = plan.custom_accommodation_rating          ?? ''
+      custom.accommodation_notes           = plan.custom_accommodation_notes           ?? ''
+    } else {
+      // Template plan — pre-load the destination and fetch its routes so we can restore selections
+      const dest = destinations.value.find(d => d.id === plan.destination_id)
+      if (dest) {
+        await selectAndLoadDestination(dest, plan)
+      }
     }
   } catch {
     // 404 = no existing plan, fine
@@ -468,10 +796,60 @@ async function selectAndLoadDestination(dest, plan) {
 function goToStep(n) {
   // Only allow jumping to completed steps
   if (n <= step.value) step.value = n
-  if (n === 2 && sel.destination) step.value = 2
-  if (n === 3 && sel.route)       step.value = 3
-  if (n === 4 && sel.transport)   step.value = 4
-  if (n === 5 && sel.accommodation) step.value = 5
+  if (planMode.value === 'template') {
+    if (n === 2 && sel.destination)   step.value = 2
+    if (n === 3 && sel.route)         step.value = 3
+    if (n === 4 && sel.transport)     step.value = 4
+    if (n === 5 && sel.accommodation) step.value = 5
+  } else {
+    if (n === 2 && custom.route_name)         step.value = 2
+    if (n === 3 && custom.transport_type)     step.value = 3
+    if (n === 4 && custom.accommodation_name) step.value = 4
+  }
+}
+
+// ── Custom-step validation flags ─────────────────────────────────────────────
+const customRouteValid = computed(() => !!custom.route_name.trim() && !!custom.duration_days)
+const customTransportValid = computed(() => !!custom.transport_type)
+const customAccomValid = computed(() => !!custom.accommodation_type && !!custom.accommodation_name.trim())
+
+// ── LiveOffers @select handlers — auto-fill custom-mode fields ──────────────
+function priceToNumber(p) {
+  if (p == null) return ''
+  if (typeof p === 'number') return p
+  const match = String(p).replace(/,/g, '').match(/[\d.]+/)
+  return match ? Number(match[0]) : ''
+}
+
+function fillCustomTransport({ kind, offer }) {
+  custom.transport_type       = kind === 'flights' ? 'flight' : 'bus'
+  custom.transport_provider   = offer.airline || offer.provider || ''
+  custom.transport_duration   = offer.duration || ''
+  custom.transport_price_from = priceToNumber(offer.price)
+  custom.transport_notes      = offer.bookingLink
+    ? `Booked via: ${offer.bookingLink}`
+    : custom.transport_notes
+}
+
+function fillCustomAccommodation({ offer }) {
+  custom.accommodation_name            = offer.name || ''
+  custom.accommodation_price_per_night = priceToNumber(offer.price)
+  custom.accommodation_rating          = offer.rating ? Number(offer.rating) : ''
+  custom.accommodation_notes           = offer.bookingLink
+    ? `Booked via: ${offer.bookingLink}`
+    : custom.accommodation_notes
+  if (!custom.accommodation_type) custom.accommodation_type = 'hotel'
+}
+
+// Either custom-mode panel renders all three tabs now, so route the select
+// event to the right filler based on the tab the offer came from.
+function onTransportPanelSelect(evt) {
+  if (evt.kind === 'hotels') fillCustomAccommodation(evt)
+  else                       fillCustomTransport(evt)
+}
+function onAccommodationPanelSelect(evt) {
+  if (evt.kind === 'hotels') fillCustomAccommodation(evt)
+  else                       fillCustomTransport(evt)
 }
 
 // ── Save ─────────────────────────────────────────────────────────────────────
@@ -479,16 +857,42 @@ async function savePlan() {
   saveError.value = ''
   saving.value    = true
   try {
-    await apiFetch(`/api/travel-plans/${tripId}`, {
-      method: 'POST',
-      body: {
-        destination_id:          sel.destination.id,
-        route_id:                sel.route.id,
-        transport_option_id:     sel.transport.id,
-        accommodation_option_id: sel.accommodation.id,
-        notes:                   notes.value,
-      },
-    })
+    if (planMode.value === 'custom') {
+      await apiFetch(`/api/travel-plans/${tripId}`, {
+        method: 'POST',
+        body: {
+          mode: 'custom',
+          custom_destination:                   trip.value?.destination ?? '',
+          custom_route_name:                    custom.route_name,
+          custom_route_description:             custom.route_description,
+          custom_duration_days:                 custom.duration_days,
+          custom_highlights:                    custom.highlights,
+          custom_transport_type:                custom.transport_type,
+          custom_transport_provider:            custom.transport_provider,
+          custom_transport_duration:            custom.transport_duration,
+          custom_transport_price_from:          custom.transport_price_from,
+          custom_transport_notes:               custom.transport_notes,
+          custom_accommodation_type:            custom.accommodation_type,
+          custom_accommodation_name:            custom.accommodation_name,
+          custom_accommodation_price_per_night: custom.accommodation_price_per_night,
+          custom_accommodation_rating:          custom.accommodation_rating,
+          custom_accommodation_notes:           custom.accommodation_notes,
+          notes:                                notes.value,
+        },
+      })
+    } else {
+      await apiFetch(`/api/travel-plans/${tripId}`, {
+        method: 'POST',
+        body: {
+          mode: 'template',
+          destination_id:          sel.destination.id,
+          route_id:                sel.route.id,
+          transport_option_id:     sel.transport.id,
+          accommodation_option_id: sel.accommodation.id,
+          notes:                   notes.value,
+        },
+      })
+    }
     savedConfirm.value = true
     step.value = 99  // hide wizard
   } catch (err) {
@@ -1063,5 +1467,96 @@ function starRating(r)           { return '★'.repeat(Math.round(r)) + '☆'.re
   .progress-label { display: none; }
   .wizard-progress { padding: 16px; }
   .review-card { padding: 20px 16px; }
+}
+
+/* ── Custom-mode form ── */
+.custom-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.cf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cf-row--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.cf-row--split > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cf-row label,
+.cf-row--split label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.cf-row input,
+.cf-row textarea,
+.cf-row--split input,
+.cf-row--split select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 2px solid var(--sand-dark);
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: var(--sand);
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s;
+  resize: vertical;
+}
+.cf-row input:focus,
+.cf-row textarea:focus,
+.cf-row--split input:focus,
+.cf-row--split select:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: var(--white);
+}
+.cf-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.custom-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.type-pill {
+  background: var(--sand);
+  border: 2px solid transparent;
+  border-radius: 100px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--navy);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.2s;
+}
+.type-pill:hover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+.type-pill--active {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--navy);
+}
+
+@media (max-width: 640px) {
+  .cf-row--split { grid-template-columns: 1fr; }
 }
 </style>

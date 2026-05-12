@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   if (!user?.uid) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-  const { title, destination, start_date, short_description, detail_description } = body
+  const { title, destination, origin, start_date, short_description, detail_description } = body
 
   if (!title?.trim() || !destination?.trim() || !start_date || !short_description?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Missing required fields' })
@@ -31,10 +31,18 @@ export default defineEventHandler(async (event) => {
 
   const { rows } = await db.query(
     `INSERT INTO trips
-     (user_uid, title, destination, start_date, short_description, detail_description)
-     VALUES ($1,$2,$3,$4,$5,$6)
+     (user_uid, title, destination, origin, start_date, short_description, detail_description)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
      RETURNING *`,
-    [user.uid, title.trim(), destination.trim(), start_date, short_description.trim(), detail_description?.trim() ?? '']
+    [
+      user.uid,
+      title.trim(),
+      destination.trim(),
+      origin?.trim() ?? '',
+      start_date,
+      short_description.trim(),
+      detail_description?.trim() ?? '',
+    ]
   )
   return rows[0]
 })

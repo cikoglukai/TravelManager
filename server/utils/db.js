@@ -135,4 +135,32 @@ export async function initDb() {
       updated_at              TIMESTAMPTZ DEFAULT NOW()
     );
   `)
+
+  // Per-trip origin city — used by the live flight/bus search endpoints.
+  await pool.query(`
+    ALTER TABLE trips
+      ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT '';
+  `)
+
+  // Custom-plan columns — let users author a free-form travel plan without
+  // selecting one of the seeded template destinations/routes/options.
+  await pool.query(`
+    ALTER TABLE travel_plans
+      ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'template',
+      ADD COLUMN IF NOT EXISTS custom_destination                   TEXT,
+      ADD COLUMN IF NOT EXISTS custom_route_name                    TEXT,
+      ADD COLUMN IF NOT EXISTS custom_route_description             TEXT,
+      ADD COLUMN IF NOT EXISTS custom_duration_days                 INTEGER,
+      ADD COLUMN IF NOT EXISTS custom_highlights                    TEXT,
+      ADD COLUMN IF NOT EXISTS custom_transport_type                TEXT,
+      ADD COLUMN IF NOT EXISTS custom_transport_provider            TEXT,
+      ADD COLUMN IF NOT EXISTS custom_transport_duration            TEXT,
+      ADD COLUMN IF NOT EXISTS custom_transport_price_from          INTEGER,
+      ADD COLUMN IF NOT EXISTS custom_transport_notes               TEXT,
+      ADD COLUMN IF NOT EXISTS custom_accommodation_type            TEXT,
+      ADD COLUMN IF NOT EXISTS custom_accommodation_name            TEXT,
+      ADD COLUMN IF NOT EXISTS custom_accommodation_price_per_night INTEGER,
+      ADD COLUMN IF NOT EXISTS custom_accommodation_rating          NUMERIC(2,1),
+      ADD COLUMN IF NOT EXISTS custom_accommodation_notes           TEXT;
+  `)
 }

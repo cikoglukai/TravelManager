@@ -23,9 +23,20 @@
       </div>
     </div>
 
-    <div class="form-group half">
-      <label for="start_date">Start Date *</label>
-      <input id="start_date" v-model="form.start_date" type="date" required />
+    <div class="form-row">
+      <div class="form-group">
+        <label for="origin">Origin City</label>
+        <input
+          id="origin"
+          v-model="form.origin"
+          type="text"
+          placeholder='e.g. "Stuttgart" — used to search real flights & buses'
+        />
+      </div>
+      <div class="form-group">
+        <label for="start_date">Start Date *</label>
+        <input id="start_date" v-model="form.start_date" type="date" required />
+      </div>
     </div>
 
     <div class="form-group">
@@ -80,6 +91,7 @@ const loading = ref(false)
 const form = reactive({
   title: props.trip?.title ?? '',
   destination: props.trip?.destination ?? '',
+  origin: props.trip?.origin ?? '',
   start_date: props.trip?.start_date ?? '',
   short_description: props.trip?.short_description ?? '',
   detail_description: props.trip?.detail_description ?? '',
