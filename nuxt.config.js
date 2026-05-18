@@ -3,6 +3,20 @@ export default defineNuxtConfig({
   serverDir: 'server/',
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
+
+  runtimeConfig: {
+    rapidApiKey: process.env.RAPIDAPI_KEY ?? '',
+    public: {
+      firebase: {
+        apiKey:            process.env.NUXT_PUBLIC_FIREBASE_API_KEY          ?? '',
+        authDomain:        process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN      ?? '',
+        projectId:         process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID       ?? '',
+        appId:             process.env.NUXT_PUBLIC_FIREBASE_APP_ID           ?? '',
+        storageBucket:     process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET   ?? '',
+      },
+    },
+  },
+
   vite: {
     build: {
       chunkSizeWarningLimit: 2000,
@@ -17,4 +31,7 @@ export default defineNuxtConfig({
       },
     },
   },
+  nitro: {
+    preset: "node-server"
+  }
 })

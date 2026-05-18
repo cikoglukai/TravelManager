@@ -1,0 +1,54 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/https.conf.template:/etc/nginx/templates/https.conf.template:ro
+      - ./nginx/99-enable-https.sh:/docker-entrypoint.d/99-enable-https.sh:ro
+      - certbot_www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles:
+      - certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    restart: "no"
+
+  cloud-sql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1
+    command:
+      - "--address=0.0.0.0"
+      - "--port=5432"
+      - "${CLOUD_SQL_CONNECTION_NAME}"
+    expose:
+      - "5432"
+    restart: unless-stopped
+
+  app:
+    image: ${IMAGE_URI}
+    depends_on:
+      - cloud-sql-proxy
+    expose:
+      - "8080"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=8080
+    restart: unless-stopped
+
+volumes:
+  certbot_www:
+  letsencrypt:

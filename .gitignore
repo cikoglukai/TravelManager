@@ -40,6 +40,27 @@ __screenshots__/
 .output
 .data
 .cache
+.claude
+.agents
+
+.impeccable.md
+skills-lock.json
 
 # Env
 .env
+
+# Local-dev compose override (re-adds gcloud ADC mount for laptop devs)
+docker-compose.override.yml
+
+# Terraform local state and secrets
+terraform/.terraform/
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+
+terraform_iaas/.terraform/
+terraform_iaas/terraform.tfvars
+terraform_iaas/*.auto.tfvars
+terraform_iaas/*.tfstate
+terraform_iaas/*.tfstate.*

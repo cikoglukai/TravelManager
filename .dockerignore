@@ -8,3 +8,7 @@ Dockerfile
 docker-compose.yml
 DEPLOYMENT_*.md
 README.md
+
+.claude
+.agents
+.impeccable.md

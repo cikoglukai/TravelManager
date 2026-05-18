@@ -23,9 +23,20 @@
       </div>
     </div>
 
-    <div class="form-group half">
-      <label for="start_date">Start Date *</label>
-      <input id="start_date" v-model="form.start_date" type="date" required />
+    <div class="form-row">
+      <div class="form-group">
+        <label for="origin">Origin City</label>
+        <input
+          id="origin"
+          v-model="form.origin"
+          type="text"
+          placeholder='e.g. "Stuttgart" — used to search real flights & buses'
+        />
+      </div>
+      <div class="form-group">
+        <label for="start_date">Start Date *</label>
+        <input id="start_date" v-model="form.start_date" type="date" required />
+      </div>
     </div>
 
     <div class="form-group">
@@ -71,7 +82,7 @@
 <script setup>
 const props = defineProps({ trip: { type: Object, default: null } })
 const emit = defineEmits(['saved', 'cancelled'])
-const { user } = useAuth()
+const { apiFetch } = useApiFetch()
 
 const isEdit = computed(() => !!props.trip)
 const error = ref('')
@@ -80,6 +91,7 @@ const loading = ref(false)
 const form = reactive({
   title: props.trip?.title ?? '',
   destination: props.trip?.destination ?? '',
+  origin: props.trip?.origin ?? '',
   start_date: props.trip?.start_date ?? '',
   short_description: props.trip?.short_description ?? '',
   detail_description: props.trip?.detail_description ?? '',
@@ -91,9 +103,9 @@ async function handleSubmit() {
   try {
     let result
     if (isEdit.value) {
-      result = await $fetch(`/api/trips/${props.trip.id}`, { method: 'PUT', body: { ...form } })
+      result = await apiFetch(`/api/trips/${props.trip.id}`, { method: 'PUT', body: { ...form } })
     } else {
-      result = await $fetch('/api/trips', { method: 'POST', body: { ...form, user_id: user.value.id } })
+      result = await apiFetch('/api/trips', { method: 'POST', body: { ...form } })
     }
     emit('saved', result)
   } catch (err) {

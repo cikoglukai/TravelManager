@@ -1,0 +1,1518 @@
+{
+  "configuration" : { },
+  "description" : "Cloud Application Development – HTWG Konstanz | Milestone 2",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedDate" : "2026-05-06T20:09:49Z",
+  "model" : {
+    "people" : [ {
+      "description" : "End user. Plans, manages and shares trips. Receives travel alerts and personalized feed.",
+      "id" : "1",
+      "name" : "Traveler",
+      "properties" : {
+        "structurizr.dsl.identifier" : "traveler"
+      },
+      "relationships" : [ {
+        "description" : "Uses web app",
+        "destinationId" : "10",
+        "id" : "59",
+        "sourceId" : "1",
+        "tags" : "Relationship",
+        "technology" : "HTTPS"
+      }, {
+        "description" : "Uses web app",
+        "destinationId" : "8",
+        "id" : "60",
+        "linkedRelationshipId" : "59",
+        "sourceId" : "1",
+        "technology" : "HTTPS"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "B2B partner. Manages destination services and accesses aggregated traveler marketing data.",
+      "id" : "2",
+      "name" : "Destination Manager",
+      "properties" : {
+        "structurizr.dsl.identifier" : "destinationMgr"
+      },
+      "relationships" : [ {
+        "description" : "Accesses B2B data API",
+        "destinationId" : "9",
+        "id" : "61",
+        "sourceId" : "2",
+        "tags" : "Relationship",
+        "technology" : "HTTPS / JSON"
+      }, {
+        "description" : "Accesses B2B data API",
+        "destinationId" : "8",
+        "id" : "62",
+        "linkedRelationshipId" : "61",
+        "sourceId" : "2",
+        "technology" : "HTTPS / JSON"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "description" : "Email/password and Google OAuth. Issues signed JWT tokens.",
+        "documentation" : { },
+        "id" : "4",
+        "name" : "Firebase Auth",
+        "properties" : {
+          "structurizr.dsl.identifier" : "firebaseAuth"
+        },
+        "tags" : "Element,Container",
+        "technology" : "Firebase Service"
+      } ],
+      "description" : "Google identity platform.",
+      "documentation" : { },
+      "id" : "3",
+      "name" : "Firebase",
+      "properties" : {
+        "structurizr.dsl.identifier" : "firebase"
+      },
+      "tags" : "Element,Software System,External System"
+    }, {
+      "description" : "Official government travel warning feeds (e.g. Auswärtiges Amt, FCDO).",
+      "documentation" : { },
+      "id" : "5",
+      "name" : "Travel Warnings API",
+      "properties" : {
+        "structurizr.dsl.identifier" : "warningsApi"
+      },
+      "tags" : "Element,Software System,External System"
+    }, {
+      "description" : "Third-party weather data provider (e.g. OpenWeatherMap).",
+      "documentation" : { },
+      "id" : "6",
+      "name" : "Weather API",
+      "properties" : {
+        "structurizr.dsl.identifier" : "weatherApi"
+      },
+      "tags" : "Element,Software System,External System"
+    }, {
+      "description" : "Transactional email delivery.",
+      "documentation" : { },
+      "id" : "7",
+      "name" : "SendGrid",
+      "properties" : {
+        "structurizr.dsl.identifier" : "sendGrid"
+      },
+      "tags" : "Element,Software System,External System"
+    }, {
+      "containers" : [ {
+        "description" : "Single entry point for all clients. Validates Firebase JWT, enforces SaaS plan rate limits, routes to downstream services.",
+        "documentation" : { },
+        "id" : "9",
+        "name" : "API Gateway",
+        "properties" : {
+          "structurizr.dsl.identifier" : "apiGateway"
+        },
+        "relationships" : [ {
+          "description" : "Validate JWT token",
+          "destinationId" : "4",
+          "id" : "64",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "Firebase Admin SDK"
+        }, {
+          "description" : "Validate JWT token",
+          "destinationId" : "3",
+          "id" : "65",
+          "linkedRelationshipId" : "64",
+          "sourceId" : "9",
+          "technology" : "Firebase Admin SDK"
+        }, {
+          "description" : "Route /users/*",
+          "destinationId" : "18",
+          "id" : "68",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        }, {
+          "description" : "Route /trips/*, /locations/*, /reviews/*, /likes/*, /travel-plans/*",
+          "destinationId" : "22",
+          "id" : "69",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        }, {
+          "description" : "Route /destinations/*, /b2b/*",
+          "destinationId" : "29",
+          "id" : "70",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        }, {
+          "description" : "Route /feed",
+          "destinationId" : "34",
+          "id" : "71",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        }, {
+          "description" : "Route /alerts",
+          "destinationId" : "39",
+          "id" : "72",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        } ],
+        "tags" : "Element,Container,Server",
+        "technology" : "Kong / Cloud Endpoints"
+      }, {
+        "components" : [ {
+          "description" : "Create, list, view and edit trips (/trips, /trips/[id]).",
+          "documentation" : { },
+          "id" : "11",
+          "name" : "Trip Pages",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaTripPages"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        }, {
+          "description" : "Personalized live feed (/feed).",
+          "documentation" : { },
+          "id" : "12",
+          "name" : "Feed Page",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaFeedPage"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        }, {
+          "description" : "3D globe + destination details (/explore).",
+          "documentation" : { },
+          "id" : "13",
+          "name" : "Explore Page",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaExplorePage"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        }, {
+          "description" : "Itinerary builder with travel info overlay (/plan, /plan-view).",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "Plan Pages",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaPlanPage"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        }, {
+          "description" : "Displays active travel warnings and weather alerts for user's trips.",
+          "documentation" : { },
+          "id" : "15",
+          "name" : "Alert Banner",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaAlertBanner"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Component"
+        }, {
+          "description" : "Browse all public trips (/community).",
+          "documentation" : { },
+          "id" : "16",
+          "name" : "Community Page",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaCommunity"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        }, {
+          "description" : "User profile management (/profile).",
+          "documentation" : { },
+          "id" : "17",
+          "name" : "Profile Page",
+          "properties" : {
+            "structurizr.dsl.identifier" : "spaProfile"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Nuxt Page"
+        } ],
+        "description" : "Nuxt 3 single-page application. All API traffic routed through the API Gateway.",
+        "documentation" : { },
+        "id" : "10",
+        "name" : "Frontend SPA",
+        "properties" : {
+          "structurizr.dsl.identifier" : "spaFrontend"
+        },
+        "relationships" : [ {
+          "description" : "All API calls with Bearer token",
+          "destinationId" : "9",
+          "id" : "63",
+          "sourceId" : "10",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        } ],
+        "tags" : "Element,Container,Web Browser",
+        "technology" : "Nuxt 3 / Vue 3"
+      }, {
+        "components" : [ {
+          "description" : "POST /users (upsert), GET /users/me, GET /users/:id, PUT /users/:id.",
+          "documentation" : { },
+          "id" : "19",
+          "name" : "User Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "userController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "Read/write user rows in User DB.",
+          "documentation" : { },
+          "id" : "20",
+          "name" : "User Repository",
+          "properties" : {
+            "structurizr.dsl.identifier" : "userRepo"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Repository"
+        }, {
+          "description" : "Shared Firebase Admin SDK middleware – verifies JWT on every request.",
+          "documentation" : { },
+          "id" : "21",
+          "name" : "Auth Verifier",
+          "properties" : {
+            "structurizr.dsl.identifier" : "authVerifier"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Middleware"
+        } ],
+        "description" : "Manages user accounts and profiles. Upserts users on first Firebase login.",
+        "documentation" : { },
+        "id" : "18",
+        "name" : "User Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "userService"
+        },
+        "relationships" : [ {
+          "description" : "Read/write",
+          "destinationId" : "49",
+          "id" : "73",
+          "sourceId" : "18",
+          "tags" : "Relationship",
+          "technology" : "node-postgres"
+        }, {
+          "description" : "Upsert user on first login",
+          "destinationId" : "4",
+          "id" : "78",
+          "sourceId" : "18",
+          "tags" : "Relationship",
+          "technology" : "Firebase Admin SDK"
+        }, {
+          "description" : "Upsert user on first login",
+          "destinationId" : "3",
+          "id" : "79",
+          "linkedRelationshipId" : "78",
+          "sourceId" : "18",
+          "technology" : "Firebase Admin SDK"
+        } ],
+        "tags" : "Element,Container,Server",
+        "technology" : "Node.js / Nitro"
+      }, {
+        "components" : [ {
+          "description" : "CRUD /trips, /trips/:id, GET /trips/all (public).",
+          "documentation" : { },
+          "id" : "23",
+          "name" : "Trip Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "tripController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "CRUD /locations/trip/:tripId, /locations/:id.",
+          "documentation" : { },
+          "id" : "24",
+          "name" : "Location Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "locationController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "POST/GET/DELETE /reviews/trip/:tripId.",
+          "documentation" : { },
+          "id" : "25",
+          "name" : "Review Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "reviewController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "POST/DELETE/GET /likes/trip/:tripId.",
+          "documentation" : { },
+          "id" : "26",
+          "name" : "Likes Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "likesController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "CRUD /travel-plans/:tripId.",
+          "documentation" : { },
+          "id" : "27",
+          "name" : "Plan Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "planController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "Publishes TripCreated / TripUpdated events to Pub/Sub after writes.",
+          "documentation" : { },
+          "id" : "28",
+          "name" : "Event Publisher",
+          "properties" : {
+            "structurizr.dsl.identifier" : "tripEventPublisher"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Pub/Sub Publisher"
+        } ],
+        "description" : "Core trip management: trips, plan locations, travel plans, reviews and likes.",
+        "documentation" : { },
+        "id" : "22",
+        "name" : "Trip Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "tripService"
+        },
+        "relationships" : [ {
+          "description" : "Read/write",
+          "destinationId" : "50",
+          "id" : "74",
+          "sourceId" : "22",
+          "tags" : "Relationship",
+          "technology" : "node-postgres"
+        }, {
+          "description" : "Publish TripCreated / TripUpdated",
+          "destinationId" : "54",
+          "id" : "80",
+          "sourceId" : "22",
+          "tags" : "Relationship",
+          "technology" : "GCP Pub/Sub"
+        } ],
+        "tags" : "Element,Container,Server",
+        "technology" : "Node.js / Nitro"
+      }, {
+        "components" : [ {
+          "description" : "GET /destinations, GET /destinations/:id/routes.",
+          "documentation" : { },
+          "id" : "30",
+          "name" : "Destination Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "destController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "GET /destinations/:id/transport, /accommodation.",
+          "documentation" : { },
+          "id" : "31",
+          "name" : "Options Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "optionsController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "GET /b2b/destinations/:id/travelers – aggregated marketing data for partners.",
+          "documentation" : { },
+          "id" : "32",
+          "name" : "B2B Controller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "b2bController"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "Reads destination data from Destination DB.",
+          "documentation" : { },
+          "id" : "33",
+          "name" : "Destination Repository",
+          "properties" : {
+            "structurizr.dsl.identifier" : "destRepo"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Repository"
+        } ],
+        "description" : "Manages destinations, routes, transport and accommodation options. Provides B2B data access for destination partners.",
+        "documentation" : { },
+        "id" : "29",
+        "name" : "Destination Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "destinationService"
+        },
+        "relationships" : [ {
+          "description" : "Read/write",
+          "destinationId" : "51",
+          "id" : "75",
+          "sourceId" : "29",
+          "tags" : "Relationship",
+          "technology" : "node-postgres"
+        } ],
+        "tags" : "Element,Container,Server",
+        "technology" : "Node.js / Nitro"
+      }, {
+        "components" : [ {
+          "description" : "Subscribes to TripCreated/Updated events. Scores relevance per follower.",
+          "documentation" : { },
+          "id" : "35",
+          "name" : "Feed Consumer",
+          "properties" : {
+            "structurizr.dsl.identifier" : "feedConsumer"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Pub/Sub Subscriber"
+        }, {
+          "description" : "Assembles and stores personalized feed entries in Social DB.",
+          "documentation" : { },
+          "id" : "36",
+          "name" : "Feed Builder",
+          "properties" : {
+            "structurizr.dsl.identifier" : "feedBuilder"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Worker"
+        }, {
+          "description" : "GET /feed – returns pre-computed feed for authenticated user.",
+          "documentation" : { },
+          "id" : "37",
+          "name" : "Feed API",
+          "properties" : {
+            "structurizr.dsl.identifier" : "feedApi"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Route Handler"
+        }, {
+          "description" : "Scheduled CronJob: aggregates weekly highlights, publishes NewsletterReady event.",
+          "documentation" : { },
+          "id" : "38",
+          "name" : "Newsletter Job",
+          "properties" : {
+            "structurizr.dsl.identifier" : "newsletterJob"
+          },
+          "tags" : "Element,Component",
+          "technology" : "CronJob"
+        } ],
+        "description" : "Builds personalized live feeds and newsletters by consuming trip events asynchronously. Handles large datasets via background workers.",
+        "documentation" : { },
+        "id" : "34",
+        "name" : "Social Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "socialService"
+        },
+        "relationships" : [ {
+          "description" : "Read/write",
+          "destinationId" : "52",
+          "id" : "76",
+          "sourceId" : "34",
+          "tags" : "Relationship",
+          "technology" : "node-postgres"
+        }, {
+          "description" : "Subscribe TripCreated / TripUpdated",
+          "destinationId" : "54",
+          "id" : "81",
+          "sourceId" : "34",
+          "tags" : "Relationship",
+          "technology" : "GCP Pub/Sub"
+        }, {
+          "description" : "Publish NewsletterReady",
+          "destinationId" : "54",
+          "id" : "82",
+          "sourceId" : "34",
+          "tags" : "Relationship",
+          "technology" : "GCP Pub/Sub"
+        } ],
+        "tags" : "Element,Container,Async Worker",
+        "technology" : "Node.js / Worker"
+      }, {
+        "components" : [ {
+          "description" : "CronJob: fetches official travel warnings from external API.",
+          "documentation" : { },
+          "id" : "40",
+          "name" : "Warning Poller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "warningPoller"
+          },
+          "tags" : "Element,Component",
+          "technology" : "CronJob"
+        }, {
+          "description" : "CronJob: fetches weather forecasts for all destination cities.",
+          "documentation" : { },
+          "id" : "41",
+          "name" : "Weather Poller",
+          "properties" : {
+            "structurizr.dsl.identifier" : "weatherPoller"
+          },
+          "tags" : "Element,Component",
+          "technology" : "CronJob"
+        }, {
+          "description" : "Compares new warning/weather data with active travel plans. Identifies affected users.",
+          "documentation" : { },
+          "id" : "42",
+          "name" : "Diff Engine",
+          "properties" : {
+            "structurizr.dsl.identifier" : "diffEngine"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Business Logic"
+        }, {
+          "description" : "Publishes TravelAlert events to Pub/Sub.",
+          "documentation" : { },
+          "id" : "43",
+          "name" : "Alert Publisher",
+          "properties" : {
+            "structurizr.dsl.identifier" : "alertPublisher"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Pub/Sub Publisher"
+        } ],
+        "description" : "Scheduled service: polls travel warnings and weather data, diffs against active trip plans, notifies affected travelers.",
+        "documentation" : { },
+        "id" : "39",
+        "name" : "Travel Info Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "travelInfoService"
+        },
+        "relationships" : [ {
+          "description" : "Read/write",
+          "destinationId" : "53",
+          "id" : "77",
+          "sourceId" : "39",
+          "tags" : "Relationship",
+          "technology" : "node-postgres"
+        }, {
+          "description" : "Publish TravelAlert",
+          "destinationId" : "54",
+          "id" : "83",
+          "sourceId" : "39",
+          "tags" : "Relationship",
+          "technology" : "GCP Pub/Sub"
+        }, {
+          "description" : "Poll travel warnings (scheduled)",
+          "destinationId" : "5",
+          "id" : "85",
+          "sourceId" : "39",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / REST"
+        }, {
+          "description" : "Poll weather forecasts (scheduled)",
+          "destinationId" : "6",
+          "id" : "87",
+          "sourceId" : "39",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / REST"
+        }, {
+          "description" : "GET active travel plans for diff",
+          "destinationId" : "22",
+          "id" : "89",
+          "sourceId" : "39",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / JSON"
+        } ],
+        "tags" : "Element,Container,Async Worker",
+        "technology" : "Node.js / Worker"
+      }, {
+        "components" : [ {
+          "description" : "Subscribes to TravelAlert events.",
+          "documentation" : { },
+          "id" : "45",
+          "name" : "Alert Consumer",
+          "properties" : {
+            "structurizr.dsl.identifier" : "alertConsumer"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Pub/Sub Subscriber"
+        }, {
+          "description" : "Subscribes to NewsletterReady events.",
+          "documentation" : { },
+          "id" : "46",
+          "name" : "Newsletter Consumer",
+          "properties" : {
+            "structurizr.dsl.identifier" : "newsletterConsumer"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Pub/Sub Subscriber"
+        }, {
+          "description" : "Sends transactional emails via SendGrid.",
+          "documentation" : { },
+          "id" : "47",
+          "name" : "Email Sender",
+          "properties" : {
+            "structurizr.dsl.identifier" : "emailSender"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Notification Channel"
+        }, {
+          "description" : "Delivers browser Web Push notifications.",
+          "documentation" : { },
+          "id" : "48",
+          "name" : "Push Sender",
+          "properties" : {
+            "structurizr.dsl.identifier" : "pushSender"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Notification Channel"
+        } ],
+        "description" : "Consumes events from Pub/Sub and delivers email and push notifications to travelers.",
+        "documentation" : { },
+        "id" : "44",
+        "name" : "Notification Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "notificationService"
+        },
+        "relationships" : [ {
+          "description" : "Subscribe TravelAlert, NewsletterReady",
+          "destinationId" : "54",
+          "id" : "84",
+          "sourceId" : "44",
+          "tags" : "Relationship",
+          "technology" : "GCP Pub/Sub"
+        }, {
+          "description" : "Send transactional emails",
+          "destinationId" : "7",
+          "id" : "90",
+          "sourceId" : "44",
+          "tags" : "Relationship",
+          "technology" : "HTTPS / SMTP"
+        }, {
+          "description" : "Push notification / email",
+          "destinationId" : "1",
+          "id" : "92",
+          "sourceId" : "44",
+          "tags" : "Relationship",
+          "technology" : "Web Push / Email"
+        } ],
+        "tags" : "Element,Container,Async Worker",
+        "technology" : "Node.js / Worker"
+      }, {
+        "description" : "User profiles.",
+        "documentation" : { },
+        "id" : "49",
+        "name" : "User DB",
+        "properties" : {
+          "structurizr.dsl.identifier" : "userDB"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "PostgreSQL 16"
+      }, {
+        "description" : "Trips, locations, plans, reviews, likes.",
+        "documentation" : { },
+        "id" : "50",
+        "name" : "Trip DB",
+        "properties" : {
+          "structurizr.dsl.identifier" : "tripDB"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "PostgreSQL 16"
+      }, {
+        "description" : "Destinations, routes, transport, accomm.",
+        "documentation" : { },
+        "id" : "51",
+        "name" : "Destination DB",
+        "properties" : {
+          "structurizr.dsl.identifier" : "destDB"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "PostgreSQL 16"
+      }, {
+        "description" : "Feed entries, follow graph, newsletter log.",
+        "documentation" : { },
+        "id" : "52",
+        "name" : "Social DB",
+        "properties" : {
+          "structurizr.dsl.identifier" : "socialDB"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "PostgreSQL 16"
+      }, {
+        "description" : "Cached warnings, weather snapshots, alert log.",
+        "documentation" : { },
+        "id" : "53",
+        "name" : "Travel Info DB",
+        "properties" : {
+          "structurizr.dsl.identifier" : "travelInfoDB"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "PostgreSQL 16"
+      }, {
+        "description" : "Pub/Sub topics: TripCreated, TripUpdated, TravelAlert, NewsletterReady.",
+        "documentation" : { },
+        "id" : "54",
+        "name" : "Message Bus",
+        "properties" : {
+          "structurizr.dsl.identifier" : "messageBus"
+        },
+        "tags" : "Element,Container,Queue",
+        "technology" : "GCP Pub/Sub"
+      }, {
+        "description" : "Kubernetes cluster. All services deployed as Deployments with HPA. CronJobs for scheduled workers. Provisioned via Terraform.",
+        "documentation" : { },
+        "id" : "55",
+        "name" : "GKE Cluster",
+        "properties" : {
+          "structurizr.dsl.identifier" : "gkeCluster"
+        },
+        "relationships" : [ {
+          "description" : "Runs as Deployment + LoadBalancer",
+          "destinationId" : "9",
+          "id" : "94",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as Deployment + HPA",
+          "destinationId" : "18",
+          "id" : "95",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as Deployment + HPA",
+          "destinationId" : "22",
+          "id" : "96",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as Deployment + HPA",
+          "destinationId" : "29",
+          "id" : "97",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as Deployment + HPA",
+          "destinationId" : "34",
+          "id" : "98",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as CronJob + Worker Deployment",
+          "destinationId" : "39",
+          "id" : "99",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Runs as Deployment",
+          "destinationId" : "44",
+          "id" : "100",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes"
+        }, {
+          "description" : "Cloud SQL Auth Proxy sidecar",
+          "destinationId" : "58",
+          "id" : "101",
+          "sourceId" : "55",
+          "tags" : "Relationship",
+          "technology" : "Private IP / IAM"
+        } ],
+        "tags" : "Element,Container,Server",
+        "technology" : "Google Kubernetes Engine"
+      }, {
+        "description" : "Stores Docker images for all services. Referenced by GKE workloads.",
+        "documentation" : { },
+        "id" : "56",
+        "name" : "Artifact Registry",
+        "properties" : {
+          "structurizr.dsl.identifier" : "artifactReg"
+        },
+        "tags" : "Element,Container",
+        "technology" : "GCP Service"
+      }, {
+        "description" : "Stores DB connection strings, Firebase config and API keys per service. Mounted as K8s Secrets via ESO.",
+        "documentation" : { },
+        "id" : "57",
+        "name" : "Secret Manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "secretMgr"
+        },
+        "relationships" : [ {
+          "description" : "Secrets mounted via ESO",
+          "destinationId" : "55",
+          "id" : "102",
+          "sourceId" : "57",
+          "tags" : "Relationship",
+          "technology" : "Kubernetes / GCP"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "GCP Service"
+      }, {
+        "description" : "Managed PostgreSQL 16 – one instance per service database. Connected via Cloud SQL Auth Proxy sidecar.",
+        "documentation" : { },
+        "id" : "58",
+        "name" : "Cloud SQL",
+        "properties" : {
+          "structurizr.dsl.identifier" : "cloudSQLProxy"
+        },
+        "tags" : "Element,Container,Database",
+        "technology" : "GCP / PostgreSQL 16"
+      } ],
+      "description" : "Microservice SaaS platform. Plans: Free / Standard / Enterprise. Follows 12-Factor principles. Deployed on GKE via Terraform.",
+      "documentation" : { },
+      "id" : "8",
+      "name" : "TravelManager",
+      "properties" : {
+        "structurizr.dsl.identifier" : "travelManager"
+      },
+      "relationships" : [ {
+        "description" : "Validate JWT token",
+        "destinationId" : "4",
+        "id" : "66",
+        "linkedRelationshipId" : "64",
+        "sourceId" : "8",
+        "technology" : "Firebase Admin SDK"
+      }, {
+        "description" : "Validate JWT token",
+        "destinationId" : "3",
+        "id" : "67",
+        "linkedRelationshipId" : "64",
+        "sourceId" : "8",
+        "technology" : "Firebase Admin SDK"
+      }, {
+        "description" : "Poll travel warnings (scheduled)",
+        "destinationId" : "5",
+        "id" : "86",
+        "linkedRelationshipId" : "85",
+        "sourceId" : "8",
+        "technology" : "HTTPS / REST"
+      }, {
+        "description" : "Poll weather forecasts (scheduled)",
+        "destinationId" : "6",
+        "id" : "88",
+        "linkedRelationshipId" : "87",
+        "sourceId" : "8",
+        "technology" : "HTTPS / REST"
+      }, {
+        "description" : "Send transactional emails",
+        "destinationId" : "7",
+        "id" : "91",
+        "linkedRelationshipId" : "90",
+        "sourceId" : "8",
+        "technology" : "HTTPS / SMTP"
+      }, {
+        "description" : "Push notification / email",
+        "destinationId" : "1",
+        "id" : "93",
+        "linkedRelationshipId" : "92",
+        "sourceId" : "8",
+        "technology" : "Web Push / Email"
+      } ],
+      "tags" : "Element,Software System"
+    } ]
+  },
+  "name" : "TravelManager",
+  "properties" : {
+    "structurizr.inspection.error" : "40",
+    "structurizr.dsl" : "d29ya3NwYWNlICJUcmF2ZWxNYW5hZ2VyIiAiQ2xvdWQgQXBwbGljYXRpb24gRGV2ZWxvcG1lbnQg4oCTIEhUV0cgS29uc3RhbnogfCBNaWxlc3RvbmUgMiIgewoKICAgIG1vZGVsIHsKICAgICAgICAjIOKUgOKUgOKUgCBQZW9wbGUg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgdHJhdmVsZXIgICAgICAgPSBwZXJzb24gIlRyYXZlbGVyIiAgICAgICAgICAgICJFbmQgdXNlci4gUGxhbnMsIG1hbmFnZXMgYW5kIHNoYXJlcyB0cmlwcy4gUmVjZWl2ZXMgdHJhdmVsIGFsZXJ0cyBhbmQgcGVyc29uYWxpemVkIGZlZWQuIgogICAgICAgIGRlc3RpbmF0aW9uTWdyID0gcGVyc29uICJEZXN0aW5hdGlvbiBNYW5hZ2VyIiAiQjJCIHBhcnRuZXIuIE1hbmFnZXMgZGVzdGluYXRpb24gc2VydmljZXMgYW5kIGFjY2Vzc2VzIGFnZ3JlZ2F0ZWQgdHJhdmVsZXIgbWFya2V0aW5nIGRhdGEuIgoKICAgICAgICAjIOKUgOKUgOKUgCBFeHRlcm5hbCBTeXN0ZW1zIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGZpcmViYXNlICAgID0gc29mdHdhcmVTeXN0ZW0gIkZpcmViYXNlIiAgICAgICAgICAgICAgIkdvb2dsZSBpZGVudGl0eSBwbGF0Zm9ybS4iICJFeHRlcm5hbCBTeXN0ZW0iIHsKICAgICAgICAgICAgZmlyZWJhc2VBdXRoID0gY29udGFpbmVyICJGaXJlYmFzZSBBdXRoIiAiRW1haWwvcGFzc3dvcmQgYW5kIEdvb2dsZSBPQXV0aC4gSXNzdWVzIHNpZ25lZCBKV1QgdG9rZW5zLiIgIkZpcmViYXNlIFNlcnZpY2UiCiAgICAgICAgfQogICAgICAgIHdhcm5pbmdzQXBpID0gc29mdHdhcmVTeXN0ZW0gIlRyYXZlbCBXYXJuaW5ncyBBUEkiICAgIk9mZmljaWFsIGdvdmVybm1lbnQgdHJhdmVsIHdhcm5pbmcgZmVlZHMgKGUuZy4gQXVzd8OkcnRpZ2VzIEFtdCwgRkNETykuIiAiRXh0ZXJuYWwgU3lzdGVtIgogICAgICAgIHdlYXRoZXJBcGkgID0gc29mdHdhcmVTeXN0ZW0gIldlYXRoZXIgQVBJIiAgICAgICAgICAgIlRoaXJkLXBhcnR5IHdlYXRoZXIgZGF0YSBwcm92aWRlciAoZS5nLiBPcGVuV2VhdGhlck1hcCkuIiAiRXh0ZXJuYWwgU3lzdGVtIgogICAgICAgIHNlbmRHcmlkICAgID0gc29mdHdhcmVTeXN0ZW0gIlNlbmRHcmlkIiAgICAgICAgICAgICAgIlRyYW5zYWN0aW9uYWwgZW1haWwgZGVsaXZlcnkuIiAiRXh0ZXJuYWwgU3lzdGVtIgoKICAgICAgICAjIOKUgOKUgOKUgCBUcmF2ZWxNYW5hZ2VyIFNhYVMgUGxhdGZvcm0g4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgdHJhdmVsTWFuYWdlciA9IHNvZnR3YXJlU3lzdGVtICJUcmF2ZWxNYW5hZ2VyIiAiTWljcm9zZXJ2aWNlIFNhYVMgcGxhdGZvcm0uIFBsYW5zOiBGcmVlIC8gU3RhbmRhcmQgLyBFbnRlcnByaXNlLiBGb2xsb3dzIDEyLUZhY3RvciBwcmluY2lwbGVzLiBEZXBsb3llZCBvbiBHS0UgdmlhIFRlcnJhZm9ybS4iIHsKCiAgICAgICAgICAgICMg4pSA4pSAIEFQSSBHYXRld2F5IOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICBhcGlHYXRld2F5ID0gY29udGFpbmVyICJBUEkgR2F0ZXdheSIgIlNpbmdsZSBlbnRyeSBwb2ludCBmb3IgYWxsIGNsaWVudHMuIFZhbGlkYXRlcyBGaXJlYmFzZSBKV1QsIGVuZm9yY2VzIFNhYVMgcGxhbiByYXRlIGxpbWl0cywgcm91dGVzIHRvIGRvd25zdHJlYW0gc2VydmljZXMuIiAiS29uZyAvIENsb3VkIEVuZHBvaW50cyIgIlNlcnZlciIKCiAgICAgICAgICAgICMg4pSA4pSAIEZyb250ZW5kIFNQQSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgICAgc3BhRnJvbnRlbmQgPSBjb250YWluZXIgIkZyb250ZW5kIFNQQSIgIk51eHQgMyBzaW5nbGUtcGFnZSBhcHBsaWNhdGlvbi4gQWxsIEFQSSB0cmFmZmljIHJvdXRlZCB0aHJvdWdoIHRoZSBBUEkgR2F0ZXdheS4iICJOdXh0IDMgLyBWdWUgMyIgIldlYiBCcm93c2VyIiB7CiAgICAgICAgICAgICAgICBzcGFUcmlwUGFnZXMgICAgPSBjb21wb25lbnQgIlRyaXAgUGFnZXMiICAgICAgIkNyZWF0ZSwgbGlzdCwgdmlldyBhbmQgZWRpdCB0cmlwcyAoL3RyaXBzLCAvdHJpcHMvW2lkXSkuIiAiTnV4dCBQYWdlIgogICAgICAgICAgICAgICAgc3BhRmVlZFBhZ2UgICAgID0gY29tcG9uZW50ICJGZWVkIFBhZ2UiICAgICAgICJQZXJzb25hbGl6ZWQgbGl2ZSBmZWVkICgvZmVlZCkuIiAiTnV4dCBQYWdlIgogICAgICAgICAgICAgICAgc3BhRXhwbG9yZVBhZ2UgID0gY29tcG9uZW50ICJFeHBsb3JlIFBhZ2UiICAgICIzRCBnbG9iZSArIGRlc3RpbmF0aW9uIGRldGFpbHMgKC9leHBsb3JlKS4iICJOdXh0IFBhZ2UiCiAgICAgICAgICAgICAgICBzcGFQbGFuUGFnZSAgICAgPSBjb21wb25lbnQgIlBsYW4gUGFnZXMiICAgICAgIkl0aW5lcmFyeSBidWlsZGVyIHdpdGggdHJhdmVsIGluZm8gb3ZlcmxheSAoL3BsYW4sIC9wbGFuLXZpZXcpLiIgIk51eHQgUGFnZSIKICAgICAgICAgICAgICAgIHNwYUFsZXJ0QmFubmVyICA9IGNvbXBvbmVudCAiQWxlcnQgQmFubmVyIiAgICAiRGlzcGxheXMgYWN0aXZlIHRyYXZlbCB3YXJuaW5ncyBhbmQgd2VhdGhlciBhbGVydHMgZm9yIHVzZXIncyB0cmlwcy4iICJOdXh0IENvbXBvbmVudCIKICAgICAgICAgICAgICAgIHNwYUNvbW11bml0eSAgICA9IGNvbXBvbmVudCAiQ29tbXVuaXR5IFBhZ2UiICAiQnJvd3NlIGFsbCBwdWJsaWMgdHJpcHMgKC9jb21tdW5pdHkpLiIgIk51eHQgUGFnZSIKICAgICAgICAgICAgICAgIHNwYVByb2ZpbGUgICAgICA9IGNvbXBvbmVudCAiUHJvZmlsZSBQYWdlIiAgICAiVXNlciBwcm9maWxlIG1hbmFnZW1lbnQgKC9wcm9maWxlKS4iICJOdXh0IFBhZ2UiCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgICMg4pSA4pSAIFVzZXIgU2VydmljZSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgICAgdXNlclNlcnZpY2UgPSBjb250YWluZXIgIlVzZXIgU2VydmljZSIgIk1hbmFnZXMgdXNlciBhY2NvdW50cyBhbmQgcHJvZmlsZXMuIFVwc2VydHMgdXNlcnMgb24gZmlyc3QgRmlyZWJhc2UgbG9naW4uIiAiTm9kZS5qcyAvIE5pdHJvIiAiU2VydmVyIiB7CiAgICAgICAgICAgICAgICB1c2VyQ29udHJvbGxlciA9IGNvbXBvbmVudCAiVXNlciBDb250cm9sbGVyIiAiUE9TVCAvdXNlcnMgKHVwc2VydCksIEdFVCAvdXNlcnMvbWUsIEdFVCAvdXNlcnMvOmlkLCBQVVQgL3VzZXJzLzppZC4iICJSb3V0ZSBIYW5kbGVyIgogICAgICAgICAgICAgICAgdXNlclJlcG8gICAgICAgPSBjb21wb25lbnQgIlVzZXIgUmVwb3NpdG9yeSIgIlJlYWQvd3JpdGUgdXNlciByb3dzIGluIFVzZXIgREIuIiAiUmVwb3NpdG9yeSIKICAgICAgICAgICAgICAgIGF1dGhWZXJpZmllciAgID0gY29tcG9uZW50ICJBdXRoIFZlcmlmaWVyIiAgIlNoYXJlZCBGaXJlYmFzZSBBZG1pbiBTREsgbWlkZGxld2FyZSDigJMgdmVyaWZpZXMgSldUIG9uIGV2ZXJ5IHJlcXVlc3QuIiAiTWlkZGxld2FyZSIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgIyDilIDilIAgVHJpcCBTZXJ2aWNlIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICB0cmlwU2VydmljZSA9IGNvbnRhaW5lciAiVHJpcCBTZXJ2aWNlIiAiQ29yZSB0cmlwIG1hbmFnZW1lbnQ6IHRyaXBzLCBwbGFuIGxvY2F0aW9ucywgdHJhdmVsIHBsYW5zLCByZXZpZXdzIGFuZCBsaWtlcy4iICJOb2RlLmpzIC8gTml0cm8iICJTZXJ2ZXIiIHsKICAgICAgICAgICAgICAgIHRyaXBDb250cm9sbGVyICAgICAgPSBjb21wb25lbnQgIlRyaXAgQ29udHJvbGxlciIgICAgICAiQ1JVRCAvdHJpcHMsIC90cmlwcy86aWQsIEdFVCAvdHJpcHMvYWxsIChwdWJsaWMpLiIgIlJvdXRlIEhhbmRsZXIiCiAgICAgICAgICAgICAgICBsb2NhdGlvbkNvbnRyb2xsZXIgID0gY29tcG9uZW50ICJMb2NhdGlvbiBDb250cm9sbGVyIiAgIkNSVUQgL2xvY2F0aW9ucy90cmlwLzp0cmlwSWQsIC9sb2NhdGlvbnMvOmlkLiIgIlJvdXRlIEhhbmRsZXIiCiAgICAgICAgICAgICAgICByZXZpZXdDb250cm9sbGVyICAgID0gY29tcG9uZW50ICJSZXZpZXcgQ29udHJvbGxlciIgICAgIlBPU1QvR0VUL0RFTEVURSAvcmV2aWV3cy90cmlwLzp0cmlwSWQuIiAiUm91dGUgSGFuZGxlciIKICAgICAgICAgICAgICAgIGxpa2VzQ29udHJvbGxlciAgICAgPSBjb21wb25lbnQgIkxpa2VzIENvbnRyb2xsZXIiICAgICAiUE9TVC9ERUxFVEUvR0VUIC9saWtlcy90cmlwLzp0cmlwSWQuIiAiUm91dGUgSGFuZGxlciIKICAgICAgICAgICAgICAgIHBsYW5Db250cm9sbGVyICAgICAgPSBjb21wb25lbnQgIlBsYW4gQ29udHJvbGxlciIgICAgICAiQ1JVRCAvdHJhdmVsLXBsYW5zLzp0cmlwSWQuIiAiUm91dGUgSGFuZGxlciIKICAgICAgICAgICAgICAgIHRyaXBFdmVudFB1Ymxpc2hlciAgPSBjb21wb25lbnQgIkV2ZW50IFB1Ymxpc2hlciIgICAgICAiUHVibGlzaGVzIFRyaXBDcmVhdGVkIC8gVHJpcFVwZGF0ZWQgZXZlbnRzIHRvIFB1Yi9TdWIgYWZ0ZXIgd3JpdGVzLiIgIlB1Yi9TdWIgUHVibGlzaGVyIgogICAgICAgICAgICB9CgogICAgICAgICAgICAjIOKUgOKUgCBEZXN0aW5hdGlvbiBTZXJ2aWNlIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICBkZXN0aW5hdGlvblNlcnZpY2UgPSBjb250YWluZXIgIkRlc3RpbmF0aW9uIFNlcnZpY2UiICJNYW5hZ2VzIGRlc3RpbmF0aW9ucywgcm91dGVzLCB0cmFuc3BvcnQgYW5kIGFjY29tbW9kYXRpb24gb3B0aW9ucy4gUHJvdmlkZXMgQjJCIGRhdGEgYWNjZXNzIGZvciBkZXN0aW5hdGlvbiBwYXJ0bmVycy4iICJOb2RlLmpzIC8gTml0cm8iICJTZXJ2ZXIiIHsKICAgICAgICAgICAgICAgIGRlc3RDb250cm9sbGVyICA9IGNvbXBvbmVudCAiRGVzdGluYXRpb24gQ29udHJvbGxlciIgIkdFVCAvZGVzdGluYXRpb25zLCBHRVQgL2Rlc3RpbmF0aW9ucy86aWQvcm91dGVzLiIgIlJvdXRlIEhhbmRsZXIiCiAgICAgICAgICAgICAgICBvcHRpb25zQ29udHJvbGxlciA9IGNvbXBvbmVudCAiT3B0aW9ucyBDb250cm9sbGVyIiAgICJHRVQgL2Rlc3RpbmF0aW9ucy86aWQvdHJhbnNwb3J0LCAvYWNjb21tb2RhdGlvbi4iICJSb3V0ZSBIYW5kbGVyIgogICAgICAgICAgICAgICAgYjJiQ29udHJvbGxlciAgID0gY29tcG9uZW50ICJCMkIgQ29udHJvbGxlciIgICAgICAgICJHRVQgL2IyYi9kZXN0aW5hdGlvbnMvOmlkL3RyYXZlbGVycyDigJMgYWdncmVnYXRlZCBtYXJrZXRpbmcgZGF0YSBmb3IgcGFydG5lcnMuIiAiUm91dGUgSGFuZGxlciIKICAgICAgICAgICAgICAgIGRlc3RSZXBvICAgICAgICA9IGNvbXBvbmVudCAiRGVzdGluYXRpb24gUmVwb3NpdG9yeSIgIlJlYWRzIGRlc3RpbmF0aW9uIGRhdGEgZnJvbSBEZXN0aW5hdGlvbiBEQi4iICJSZXBvc2l0b3J5IgogICAgICAgICAgICB9CgogICAgICAgICAgICAjIOKUgOKUgCBTb2NpYWwgU2VydmljZSAoYXN5bmMpIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICBzb2NpYWxTZXJ2aWNlID0gY29udGFpbmVyICJTb2NpYWwgU2VydmljZSIgIkJ1aWxkcyBwZXJzb25hbGl6ZWQgbGl2ZSBmZWVkcyBhbmQgbmV3c2xldHRlcnMgYnkgY29uc3VtaW5nIHRyaXAgZXZlbnRzIGFzeW5jaHJvbm91c2x5LiBIYW5kbGVzIGxhcmdlIGRhdGFzZXRzIHZpYSBiYWNrZ3JvdW5kIHdvcmtlcnMuIiAiTm9kZS5qcyAvIFdvcmtlciIgIkFzeW5jIFdvcmtlciIgewogICAgICAgICAgICAgICAgZmVlZENvbnN1bWVyICAgPSBjb21wb25lbnQgIkZlZWQgQ29uc3VtZXIiICAgIlN1YnNjcmliZXMgdG8gVHJpcENyZWF0ZWQvVXBkYXRlZCBldmVudHMuIFNjb3JlcyByZWxldmFuY2UgcGVyIGZvbGxvd2VyLiIgIlB1Yi9TdWIgU3Vic2NyaWJlciIKICAgICAgICAgICAgICAgIGZlZWRCdWlsZGVyICAgID0gY29tcG9uZW50ICJGZWVkIEJ1aWxkZXIiICAgICJBc3NlbWJsZXMgYW5kIHN0b3JlcyBwZXJzb25hbGl6ZWQgZmVlZCBlbnRyaWVzIGluIFNvY2lhbCBEQi4iICJXb3JrZXIiCiAgICAgICAgICAgICAgICBmZWVkQXBpICAgICAgICA9IGNvbXBvbmVudCAiRmVlZCBBUEkiICAgICAgICAiR0VUIC9mZWVkIOKAkyByZXR1cm5zIHByZS1jb21wdXRlZCBmZWVkIGZvciBhdXRoZW50aWNhdGVkIHVzZXIuIiAiUm91dGUgSGFuZGxlciIKICAgICAgICAgICAgICAgIG5ld3NsZXR0ZXJKb2IgID0gY29tcG9uZW50ICJOZXdzbGV0dGVyIEpvYiIgICJTY2hlZHVsZWQgQ3JvbkpvYjogYWdncmVnYXRlcyB3ZWVrbHkgaGlnaGxpZ2h0cywgcHVibGlzaGVzIE5ld3NsZXR0ZXJSZWFkeSBldmVudC4iICJDcm9uSm9iIgogICAgICAgICAgICB9CgogICAgICAgICAgICAjIOKUgOKUgCBUcmF2ZWwgSW5mbyBTZXJ2aWNlIChhc3luYykg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgICAgIHRyYXZlbEluZm9TZXJ2aWNlID0gY29udGFpbmVyICJUcmF2ZWwgSW5mbyBTZXJ2aWNlIiAiU2NoZWR1bGVkIHNlcnZpY2U6IHBvbGxzIHRyYXZlbCB3YXJuaW5ncyBhbmQgd2VhdGhlciBkYXRhLCBkaWZmcyBhZ2FpbnN0IGFjdGl2ZSB0cmlwIHBsYW5zLCBub3RpZmllcyBhZmZlY3RlZCB0cmF2ZWxlcnMuIiAiTm9kZS5qcyAvIFdvcmtlciIgIkFzeW5jIFdvcmtlciIgewogICAgICAgICAgICAgICAgd2FybmluZ1BvbGxlciAgPSBjb21wb25lbnQgIldhcm5pbmcgUG9sbGVyIiAgIkNyb25Kb2I6IGZldGNoZXMgb2ZmaWNpYWwgdHJhdmVsIHdhcm5pbmdzIGZyb20gZXh0ZXJuYWwgQVBJLiIgIkNyb25Kb2IiCiAgICAgICAgICAgICAgICB3ZWF0aGVyUG9sbGVyICA9IGNvbXBvbmVudCAiV2VhdGhlciBQb2xsZXIiICAiQ3JvbkpvYjogZmV0Y2hlcyB3ZWF0aGVyIGZvcmVjYXN0cyBmb3IgYWxsIGRlc3RpbmF0aW9uIGNpdGllcy4iICJDcm9uSm9iIgogICAgICAgICAgICAgICAgZGlmZkVuZ2luZSAgICAgPSBjb21wb25lbnQgIkRpZmYgRW5naW5lIiAgICAgIkNvbXBhcmVzIG5ldyB3YXJuaW5nL3dlYXRoZXIgZGF0YSB3aXRoIGFjdGl2ZSB0cmF2ZWwgcGxhbnMuIElkZW50aWZpZXMgYWZmZWN0ZWQgdXNlcnMuIiAiQnVzaW5lc3MgTG9naWMiCiAgICAgICAgICAgICAgICBhbGVydFB1Ymxpc2hlciA9IGNvbXBvbmVudCAiQWxlcnQgUHVibGlzaGVyIiAiUHVibGlzaGVzIFRyYXZlbEFsZXJ0IGV2ZW50cyB0byBQdWIvU3ViLiIgIlB1Yi9TdWIgUHVibGlzaGVyIgogICAgICAgICAgICB9CgogICAgICAgICAgICAjIOKUgOKUgCBOb3RpZmljYXRpb24gU2VydmljZSAoYXN5bmMpIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICBub3RpZmljYXRpb25TZXJ2aWNlID0gY29udGFpbmVyICJOb3RpZmljYXRpb24gU2VydmljZSIgIkNvbnN1bWVzIGV2ZW50cyBmcm9tIFB1Yi9TdWIgYW5kIGRlbGl2ZXJzIGVtYWlsIGFuZCBwdXNoIG5vdGlmaWNhdGlvbnMgdG8gdHJhdmVsZXJzLiIgIk5vZGUuanMgLyBXb3JrZXIiICJBc3luYyBXb3JrZXIiIHsKICAgICAgICAgICAgICAgIGFsZXJ0Q29uc3VtZXIgICAgICA9IGNvbXBvbmVudCAiQWxlcnQgQ29uc3VtZXIiICAgICAgIlN1YnNjcmliZXMgdG8gVHJhdmVsQWxlcnQgZXZlbnRzLiIgIlB1Yi9TdWIgU3Vic2NyaWJlciIKICAgICAgICAgICAgICAgIG5ld3NsZXR0ZXJDb25zdW1lciA9IGNvbXBvbmVudCAiTmV3c2xldHRlciBDb25zdW1lciIgIlN1YnNjcmliZXMgdG8gTmV3c2xldHRlclJlYWR5IGV2ZW50cy4iICJQdWIvU3ViIFN1YnNjcmliZXIiCiAgICAgICAgICAgICAgICBlbWFpbFNlbmRlciAgICAgICAgPSBjb21wb25lbnQgIkVtYWlsIFNlbmRlciIgICAgICAgICJTZW5kcyB0cmFuc2FjdGlvbmFsIGVtYWlscyB2aWEgU2VuZEdyaWQuIiAiTm90aWZpY2F0aW9uIENoYW5uZWwiCiAgICAgICAgICAgICAgICBwdXNoU2VuZGVyICAgICAgICAgPSBjb21wb25lbnQgIlB1c2ggU2VuZGVyIiAgICAgICAgICJEZWxpdmVycyBicm93c2VyIFdlYiBQdXNoIG5vdGlmaWNhdGlvbnMuIiAiTm90aWZpY2F0aW9uIENoYW5uZWwiCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgICMg4pSA4pSAIERhdGFiYXNlcyAob25lIHBlciBzZXJ2aWNlIOKAkyAxMi1GYWN0b3IpIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgICB1c2VyREIgICAgICAgPSBjb250YWluZXIgIlVzZXIgREIiICAgICAgICAiVXNlciBwcm9maWxlcy4iICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICJQb3N0Z3JlU1FMIDE2IiAiRGF0YWJhc2UiCiAgICAgICAgICAgIHRyaXBEQiAgICAgICA9IGNvbnRhaW5lciAiVHJpcCBEQiIgICAgICAgICJUcmlwcywgbG9jYXRpb25zLCBwbGFucywgcmV2aWV3cywgbGlrZXMuIiAgICAgIlBvc3RncmVTUUwgMTYiICJEYXRhYmFzZSIKICAgICAgICAgICAgZGVzdERCICAgICAgID0gY29udGFpbmVyICJEZXN0aW5hdGlvbiBEQiIgIkRlc3RpbmF0aW9ucywgcm91dGVzLCB0cmFuc3BvcnQsIGFjY29tbS4iICAgICAiUG9zdGdyZVNRTCAxNiIgIkRhdGFiYXNlIgogICAgICAgICAgICBzb2NpYWxEQiAgICAgPSBjb250YWluZXIgIlNvY2lhbCBEQiIgICAgICAiRmVlZCBlbnRyaWVzLCBmb2xsb3cgZ3JhcGgsIG5ld3NsZXR0ZXIgbG9nLiIgICJQb3N0Z3JlU1FMIDE2IiAiRGF0YWJhc2UiCiAgICAgICAgICAgIHRyYXZlbEluZm9EQiA9IGNvbnRhaW5lciAiVHJhdmVsIEluZm8gREIiICJDYWNoZWQgd2FybmluZ3MsIHdlYXRoZXIgc25hcHNob3RzLCBhbGVydCBsb2cuIiAiUG9zdGdyZVNRTCAxNiIgIkRhdGFiYXNlIgoKICAgICAgICAgICAgIyDilIDilIAgQXN5bmMgYmFja2JvbmUg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgICAgIG1lc3NhZ2VCdXMgPSBjb250YWluZXIgIk1lc3NhZ2UgQnVzIiAiUHViL1N1YiB0b3BpY3M6IFRyaXBDcmVhdGVkLCBUcmlwVXBkYXRlZCwgVHJhdmVsQWxlcnQsIE5ld3NsZXR0ZXJSZWFkeS4iICJHQ1AgUHViL1N1YiIgIlF1ZXVlIgoKICAgICAgICAgICAgIyDilIDilIAgR0tFICYgSW5mcmFzdHJ1Y3R1cmUg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgICAgIGdrZUNsdXN0ZXIgICA9IGNvbnRhaW5lciAiR0tFIENsdXN0ZXIiICAgICAgICAiS3ViZXJuZXRlcyBjbHVzdGVyLiBBbGwgc2VydmljZXMgZGVwbG95ZWQgYXMgRGVwbG95bWVudHMgd2l0aCBIUEEuIENyb25Kb2JzIGZvciBzY2hlZHVsZWQgd29ya2Vycy4gUHJvdmlzaW9uZWQgdmlhIFRlcnJhZm9ybS4iICJHb29nbGUgS3ViZXJuZXRlcyBFbmdpbmUiICJTZXJ2ZXIiCiAgICAgICAgICAgIGFydGlmYWN0UmVnICA9IGNvbnRhaW5lciAiQXJ0aWZhY3QgUmVnaXN0cnkiICAiU3RvcmVzIERvY2tlciBpbWFnZXMgZm9yIGFsbCBzZXJ2aWNlcy4gUmVmZXJlbmNlZCBieSBHS0Ugd29ya2xvYWRzLiIgIkdDUCBTZXJ2aWNlIgogICAgICAgICAgICBzZWNyZXRNZ3IgICAgPSBjb250YWluZXIgIlNlY3JldCBNYW5hZ2VyIiAgICAgIlN0b3JlcyBEQiBjb25uZWN0aW9uIHN0cmluZ3MsIEZpcmViYXNlIGNvbmZpZyBhbmQgQVBJIGtleXMgcGVyIHNlcnZpY2UuIE1vdW50ZWQgYXMgSzhzIFNlY3JldHMgdmlhIEVTTy4iICJHQ1AgU2VydmljZSIKICAgICAgICAgICAgY2xvdWRTUUxQcm94eSA9IGNvbnRhaW5lciAiQ2xvdWQgU1FMIiAgICAgICAgICJNYW5hZ2VkIFBvc3RncmVTUUwgMTYg4oCTIG9uZSBpbnN0YW5jZSBwZXIgc2VydmljZSBkYXRhYmFzZS4gQ29ubmVjdGVkIHZpYSBDbG91ZCBTUUwgQXV0aCBQcm94eSBzaWRlY2FyLiIgIkdDUCAvIFBvc3RncmVTUUwgMTYiICJEYXRhYmFzZSIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSA4pSAIFJlbGF0aW9uc2hpcHMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACgogICAgICAgICMgQ2xpZW50cyDihpIgU3lzdGVtCiAgICAgICAgdHJhdmVsZXIgICAgICAgLT4gc3BhRnJvbnRlbmQgICJVc2VzIHdlYiBhcHAiICAgICAgICAgICAgICAgICAgICAgICAiSFRUUFMiCiAgICAgICAgZGVzdGluYXRpb25NZ3IgLT4gYXBpR2F0ZXdheSAgICJBY2Nlc3NlcyBCMkIgZGF0YSBBUEkiICAgICAgICAgICAgICAiSFRUUFMgLyBKU09OIgoKICAgICAgICAjIEZyb250ZW5kIOKGkiBHYXRld2F5IOKGkiBTZXJ2aWNlcwogICAgICAgIHNwYUZyb250ZW5kICAgICAgICAtPiBhcGlHYXRld2F5ICAgICAgICAgICJBbGwgQVBJIGNhbGxzIHdpdGggQmVhcmVyIHRva2VuIiAgICAgICAgICAgICAgIkhUVFBTIC8gSlNPTiIKICAgICAgICBhcGlHYXRld2F5ICAgICAgICAgLT4gZmlyZWJhc2VBdXRoICAgICAgICAiVmFsaWRhdGUgSldUIHRva2VuIiAgICAgICAgICAgICAgICAgICAgICAgICAgICJGaXJlYmFzZSBBZG1pbiBTREsiCiAgICAgICAgYXBpR2F0ZXdheSAgICAgICAgIC0+IHVzZXJTZXJ2aWNlICAgICAgICAgIlJvdXRlIC91c2Vycy8qIiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiSFRUUFMgLyBKU09OIgogICAgICAgIGFwaUdhdGV3YXkgICAgICAgICAtPiB0cmlwU2VydmljZSAgICAgICAgICJSb3V0ZSAvdHJpcHMvKiwgL2xvY2F0aW9ucy8qLCAvcmV2aWV3cy8qLCAvbGlrZXMvKiwgL3RyYXZlbC1wbGFucy8qIiAiSFRUUFMgLyBKU09OIgogICAgICAgIGFwaUdhdGV3YXkgICAgICAgICAtPiBkZXN0aW5hdGlvblNlcnZpY2UgICJSb3V0ZSAvZGVzdGluYXRpb25zLyosIC9iMmIvKiIgICAgICAgICAgICAgICAgIkhUVFBTIC8gSlNPTiIKICAgICAgICBhcGlHYXRld2F5ICAgICAgICAgLT4gc29jaWFsU2VydmljZSAgICAgICAiUm91dGUgL2ZlZWQiICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICJIVFRQUyAvIEpTT04iCiAgICAgICAgYXBpR2F0ZXdheSAgICAgICAgIC0+IHRyYXZlbEluZm9TZXJ2aWNlICAgIlJvdXRlIC9hbGVydHMiICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiSFRUUFMgLyBKU09OIgoKICAgICAgICAjIFNlcnZpY2Ug4oaSIG93biBEQgogICAgICAgIHVzZXJTZXJ2aWNlICAgICAgICAtPiB1c2VyREIgICAgICAgICAgICAgICJSZWFkL3dyaXRlIiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIm5vZGUtcG9zdGdyZXMiCiAgICAgICAgdHJpcFNlcnZpY2UgICAgICAgIC0+IHRyaXBEQiAgICAgICAgICAgICAgIlJlYWQvd3JpdGUiICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAibm9kZS1wb3N0Z3JlcyIKICAgICAgICBkZXN0aW5hdGlvblNlcnZpY2UgLT4gZGVzdERCICAgICAgICAgICAgICAiUmVhZC93cml0ZSIgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICJub2RlLXBvc3RncmVzIgogICAgICAgIHNvY2lhbFNlcnZpY2UgICAgICAtPiBzb2NpYWxEQiAgICAgICAgICAgICJSZWFkL3dyaXRlIiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIm5vZGUtcG9zdGdyZXMiCiAgICAgICAgdHJhdmVsSW5mb1NlcnZpY2UgIC0+IHRyYXZlbEluZm9EQiAgICAgICAgIlJlYWQvd3JpdGUiICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAibm9kZS1wb3N0Z3JlcyIKCiAgICAgICAgIyBTZXJ2aWNlIOKGkiBGaXJlYmFzZQogICAgICAgIHVzZXJTZXJ2aWNlICAgICAgICAtPiBmaXJlYmFzZUF1dGggICAgICAgICJVcHNlcnQgdXNlciBvbiBmaXJzdCBsb2dpbiIgICAgICAgICAgICAgICAgICAgIkZpcmViYXNlIEFkbWluIFNESyIKCiAgICAgICAgIyBBc3luYyBldmVudCBmbG93cwogICAgICAgIHRyaXBTZXJ2aWNlICAgICAgICAtPiBtZXNzYWdlQnVzICAgICAgICAgICJQdWJsaXNoIFRyaXBDcmVhdGVkIC8gVHJpcFVwZGF0ZWQiICAgICAgICAgICAgIkdDUCBQdWIvU3ViIgogICAgICAgIHNvY2lhbFNlcnZpY2UgICAgICAtPiBtZXNzYWdlQnVzICAgICAgICAgICJTdWJzY3JpYmUgVHJpcENyZWF0ZWQgLyBUcmlwVXBkYXRlZCIgICAgICAgICAgIkdDUCBQdWIvU3ViIgogICAgICAgIHNvY2lhbFNlcnZpY2UgICAgICAtPiBtZXNzYWdlQnVzICAgICAgICAgICJQdWJsaXNoIE5ld3NsZXR0ZXJSZWFkeSIgICAgICAgICAgICAgICAgICAgICAgIkdDUCBQdWIvU3ViIgogICAgICAgIHRyYXZlbEluZm9TZXJ2aWNlICAtPiBtZXNzYWdlQnVzICAgICAgICAgICJQdWJsaXNoIFRyYXZlbEFsZXJ0IiAgICAgICAgICAgICAgICAgICAgICAgICAgIkdDUCBQdWIvU3ViIgogICAgICAgIG5vdGlmaWNhdGlvblNlcnZpY2UgLT4gbWVzc2FnZUJ1cyAgICAgICAgICJTdWJzY3JpYmUgVHJhdmVsQWxlcnQsIE5ld3NsZXR0ZXJSZWFkeSIgICAgICAgIkdDUCBQdWIvU3ViIgoKICAgICAgICAjIFRyYXZlbCBJbmZvIOKGkiBFeHRlcm5hbAogICAgICAgIHRyYXZlbEluZm9TZXJ2aWNlICAtPiB3YXJuaW5nc0FwaSAgICAgICAgICJQb2xsIHRyYXZlbCB3YXJuaW5ncyAoc2NoZWR1bGVkKSIgICAgICAgICAgICAgIkhUVFBTIC8gUkVTVCIKICAgICAgICB0cmF2ZWxJbmZvU2VydmljZSAgLT4gd2VhdGhlckFwaSAgICAgICAgICAiUG9sbCB3ZWF0aGVyIGZvcmVjYXN0cyAoc2NoZWR1bGVkKSIgICAgICAgICAgICJIVFRQUyAvIFJFU1QiCiAgICAgICAgdHJhdmVsSW5mb1NlcnZpY2UgIC0+IHRyaXBTZXJ2aWNlICAgICAgICAgIkdFVCBhY3RpdmUgdHJhdmVsIHBsYW5zIGZvciBkaWZmIiAgICAgICAgICAgICAiSFRUUFMgLyBKU09OIgoKICAgICAgICAjIE5vdGlmaWNhdGlvbiDihpIgRXh0ZXJuYWwgJiBVc2VyCiAgICAgICAgbm90aWZpY2F0aW9uU2VydmljZSAtPiBzZW5kR3JpZCAgICAgICAgICAgIlNlbmQgdHJhbnNhY3Rpb25hbCBlbWFpbHMiICAgICAgICAgICAgICAgICAgICAiSFRUUFMgLyBTTVRQIgogICAgICAgIG5vdGlmaWNhdGlvblNlcnZpY2UgLT4gdHJhdmVsZXIgICAgICAgICAgICJQdXNoIG5vdGlmaWNhdGlvbiAvIGVtYWlsIiAgICAgICAgICAgICAgICAgICAgIldlYiBQdXNoIC8gRW1haWwiCgogICAgICAgICMgSW5mcmFzdHJ1Y3R1cmUKICAgICAgICBna2VDbHVzdGVyIC0+IGFwaUdhdGV3YXkgICAgICAgICAgIlJ1bnMgYXMgRGVwbG95bWVudCArIExvYWRCYWxhbmNlciIgICAgIkt1YmVybmV0ZXMiCiAgICAgICAgZ2tlQ2x1c3RlciAtPiB1c2VyU2VydmljZSAgICAgICAgICJSdW5zIGFzIERlcGxveW1lbnQgKyBIUEEiICAgICAgICAgICAgICJLdWJlcm5ldGVzIgogICAgICAgIGdrZUNsdXN0ZXIgLT4gdHJpcFNlcnZpY2UgICAgICAgICAiUnVucyBhcyBEZXBsb3ltZW50ICsgSFBBIiAgICAgICAgICAgICAiS3ViZXJuZXRlcyIKICAgICAgICBna2VDbHVzdGVyIC0+IGRlc3RpbmF0aW9uU2VydmljZSAgIlJ1bnMgYXMgRGVwbG95bWVudCArIEhQQSIgICAgICAgICAgICAgIkt1YmVybmV0ZXMiCiAgICAgICAgZ2tlQ2x1c3RlciAtPiBzb2NpYWxTZXJ2aWNlICAgICAgICJSdW5zIGFzIERlcGxveW1lbnQgKyBIUEEiICAgICAgICAgICAgICJLdWJlcm5ldGVzIgogICAgICAgIGdrZUNsdXN0ZXIgLT4gdHJhdmVsSW5mb1NlcnZpY2UgICAiUnVucyBhcyBDcm9uSm9iICsgV29ya2VyIERlcGxveW1lbnQiICAiS3ViZXJuZXRlcyIKICAgICAgICBna2VDbHVzdGVyIC0+IG5vdGlmaWNhdGlvblNlcnZpY2UgIlJ1bnMgYXMgRGVwbG95bWVudCIgICAgICAgICAgICAgICAgICAgIkt1YmVybmV0ZXMiCiAgICAgICAgZ2tlQ2x1c3RlciAtPiBjbG91ZFNRTFByb3h5ICAgICAgICJDbG91ZCBTUUwgQXV0aCBQcm94eSBzaWRlY2FyIiAgICAgICAgICJQcml2YXRlIElQIC8gSUFNIgogICAgICAgIHNlY3JldE1nciAgLT4gZ2tlQ2x1c3RlciAgICAgICAgICAiU2VjcmV0cyBtb3VudGVkIHZpYSBFU08iICAgICAgICAgICAgICAiS3ViZXJuZXRlcyAvIEdDUCIKICAgIH0KCiAgICB2aWV3cyB7CiAgICAgICAgIyDilIDilIAgTGV2ZWwgMTogU3lzdGVtIENvbnRleHQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgc3lzdGVtQ29udGV4dCB0cmF2ZWxNYW5hZ2VyICJTeXN0ZW1Db250ZXh0IiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgICAgIHRpdGxlICJMZXZlbCAxIOKAkyBTeXN0ZW0gQ29udGV4dCIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlRyYXZlbE1hbmFnZXIgU2FhUzogZW5kIHVzZXJzLCBCMkIgZGVzdGluYXRpb24gbWFuYWdlcnMgYW5kIGV4dGVybmFsIGRlcGVuZGVuY2llcy4iCiAgICAgICAgfQoKICAgICAgICAjIOKUgOKUgCBMZXZlbCAyOiBDb250YWluZXJzIChhbGwgbWljcm9zZXJ2aWNlcykg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29udGFpbmVyIHRyYXZlbE1hbmFnZXIgIkNvbnRhaW5lcnMiIHsKICAgICAgICAgICAgIyBDbGllbnRzCiAgICAgICAgICAgIGluY2x1ZGUgdHJhdmVsZXIKICAgICAgICAgICAgaW5jbHVkZSBkZXN0aW5hdGlvbk1ncgoKICAgICAgICAgICAgIyBFbnRyeSBwb2ludAogICAgICAgICAgICBpbmNsdWRlIGFwaUdhdGV3YXkKICAgICAgICAgICAgaW5jbHVkZSBzcGFGcm9udGVuZAoKICAgICAgICAgICAgIyBTeW5jaHJvbm91cyBtaWNyb3NlcnZpY2VzCiAgICAgICAgICAgIGluY2x1ZGUgdXNlclNlcnZpY2UKICAgICAgICAgICAgaW5jbHVkZSB0cmlwU2VydmljZQogICAgICAgICAgICBpbmNsdWRlIGRlc3RpbmF0aW9uU2VydmljZQoKICAgICAgICAgICAgIyBBc3luYyBtaWNyb3NlcnZpY2VzCiAgICAgICAgICAgIGluY2x1ZGUgc29jaWFsU2VydmljZQogICAgICAgICAgICBpbmNsdWRlIHRyYXZlbEluZm9TZXJ2aWNlCiAgICAgICAgICAgIGluY2x1ZGUgbm90aWZpY2F0aW9uU2VydmljZQoKICAgICAgICAgICAgIyBBc3luYyBiYWNrYm9uZQogICAgICAgICAgICBpbmNsdWRlIG1lc3NhZ2VCdXMKCiAgICAgICAgICAgICMgRGF0YWJhc2VzIChvbmUgcGVyIHNlcnZpY2UpCiAgICAgICAgICAgIGluY2x1ZGUgdXNlckRCCiAgICAgICAgICAgIGluY2x1ZGUgdHJpcERCCiAgICAgICAgICAgIGluY2x1ZGUgZGVzdERCCiAgICAgICAgICAgIGluY2x1ZGUgc29jaWFsREIKICAgICAgICAgICAgaW5jbHVkZSB0cmF2ZWxJbmZvREIKCiAgICAgICAgICAgICMgRXh0ZXJuYWwgc3lzdGVtcwogICAgICAgICAgICBpbmNsdWRlIGZpcmViYXNlCiAgICAgICAgICAgIGluY2x1ZGUgd2FybmluZ3NBcGkKICAgICAgICAgICAgaW5jbHVkZSB3ZWF0aGVyQXBpCiAgICAgICAgICAgIGluY2x1ZGUgc2VuZEdyaWQKCiAgICAgICAgICAgICMgR0tFIC8gaW5mcmEgb21pdHRlZCBoZXJlIOKAkyBzZWUgZGVwbG95bWVudCB2aWV3CiAgICAgICAgICAgIGV4Y2x1ZGUgZ2tlQ2x1c3RlcgogICAgICAgICAgICBleGNsdWRlIGFydGlmYWN0UmVnCiAgICAgICAgICAgIGV4Y2x1ZGUgc2VjcmV0TWdyCiAgICAgICAgICAgIGV4Y2x1ZGUgY2xvdWRTUUxQcm94eQoKICAgICAgICAgICAgYXV0b0xheW91dCBscgogICAgICAgICAgICB0aXRsZSAiTGV2ZWwgMiDigJMgQ29udGFpbmVycyAoTWljcm9zZXJ2aWNlcykiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJSdW50aW1lIGFyY2hpdGVjdHVyZTogNiBtaWNyb3NlcnZpY2VzIG9uIEdLRSwgZWFjaCB3aXRoIGl0cyBvd24gREIsIGNvbm5lY3RlZCB2aWEgUHViL1N1Yi4gR0tFL1RlcnJhZm9ybSBpbmZyYXN0cnVjdHVyZSBvbWl0dGVkIGZvciBjbGFyaXR5LiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDI6IERlcGxveW1lbnQgLyBJbmZyYXN0cnVjdHVyZSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBjb250YWluZXIgdHJhdmVsTWFuYWdlciAiSW5mcmFzdHJ1Y3R1cmUiIHsKICAgICAgICAgICAgaW5jbHVkZSBna2VDbHVzdGVyCiAgICAgICAgICAgIGluY2x1ZGUgYXJ0aWZhY3RSZWcKICAgICAgICAgICAgaW5jbHVkZSBzZWNyZXRNZ3IKICAgICAgICAgICAgaW5jbHVkZSBjbG91ZFNRTFByb3h5CiAgICAgICAgICAgIGluY2x1ZGUgdXNlclNlcnZpY2UKICAgICAgICAgICAgaW5jbHVkZSB0cmlwU2VydmljZQogICAgICAgICAgICBpbmNsdWRlIGRlc3RpbmF0aW9uU2VydmljZQogICAgICAgICAgICBpbmNsdWRlIHNvY2lhbFNlcnZpY2UKICAgICAgICAgICAgaW5jbHVkZSB0cmF2ZWxJbmZvU2VydmljZQogICAgICAgICAgICBpbmNsdWRlIG5vdGlmaWNhdGlvblNlcnZpY2UKICAgICAgICAgICAgaW5jbHVkZSBhcGlHYXRld2F5CiAgICAgICAgICAgIGF1dG9MYXlvdXQgbHIKICAgICAgICAgICAgdGl0bGUgIkxldmVsIDIg4oCTIERlcGxveW1lbnQgSW5mcmFzdHJ1Y3R1cmUgKEdLRSArIFRlcnJhZm9ybSkiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJIb3cgYWxsIHNlcnZpY2VzIGFyZSBob3N0ZWQgb24gR0tFLiBUZXJyYWZvcm0gcHJvdmlzaW9ucyB0aGUgY2x1c3RlciwgQ2xvdWQgU1FMIGluc3RhbmNlcywgQXJ0aWZhY3QgUmVnaXN0cnkgYW5kIFNlY3JldCBNYW5hZ2VyLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDM6IEZyb250ZW5kIFNQQSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBjb21wb25lbnQgc3BhRnJvbnRlbmQgIkNvbXBvbmVudHNGcm9udGVuZCIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgICAgICB0aXRsZSAiTGV2ZWwgMyDigJMgRnJvbnRlbmQgU1BBIENvbXBvbmVudHMiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJOdXh0IDMgcGFnZXMgYW5kIGNvbXBvbmVudHMgcnVubmluZyBpbiB0aGUgYnJvd3Nlci4iCiAgICAgICAgfQoKICAgICAgICAjIOKUgOKUgCBMZXZlbCAzOiBVc2VyIFNlcnZpY2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29tcG9uZW50IHVzZXJTZXJ2aWNlICJDb21wb25lbnRzVXNlclNlcnZpY2UiIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQKICAgICAgICAgICAgdGl0bGUgIkxldmVsIDMg4oCTIFVzZXIgU2VydmljZSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlByb2ZpbGUgbWFuYWdlbWVudCBhbmQgRmlyZWJhc2UgQXV0aCBpbnRlZ3JhdGlvbi4iCiAgICAgICAgfQoKICAgICAgICAjIOKUgOKUgCBMZXZlbCAzOiBUcmlwIFNlcnZpY2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29tcG9uZW50IHRyaXBTZXJ2aWNlICJDb21wb25lbnRzVHJpcFNlcnZpY2UiIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQKICAgICAgICAgICAgdGl0bGUgIkxldmVsIDMg4oCTIFRyaXAgU2VydmljZSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkNvcmUgdHJpcCwgbG9jYXRpb24sIHJldmlldywgbGlrZXMgYW5kIHRyYXZlbCBwbGFuIG1hbmFnZW1lbnQuIFB1Ymxpc2hlcyBkb21haW4gZXZlbnRzLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDM6IERlc3RpbmF0aW9uIFNlcnZpY2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29tcG9uZW50IGRlc3RpbmF0aW9uU2VydmljZSAiQ29tcG9uZW50c0Rlc3RpbmF0aW9uU2VydmljZSIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgICAgICB0aXRsZSAiTGV2ZWwgMyDigJMgRGVzdGluYXRpb24gU2VydmljZSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkRlc3RpbmF0aW9uIGRhdGEgYW5kIEIyQiBwYXJ0bmVyIGRhdGEgYWNjZXNzLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDM6IFNvY2lhbCBTZXJ2aWNlIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGNvbXBvbmVudCBzb2NpYWxTZXJ2aWNlICJDb21wb25lbnRzU29jaWFsU2VydmljZSIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgICAgICB0aXRsZSAiTGV2ZWwgMyDigJMgU29jaWFsIFNlcnZpY2UgKGFzeW5jKSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkFzeW5jIHdvcmtlcjogcGVyc29uYWxpemVkIGxpdmUgZmVlZCBhbmQgbmV3c2xldHRlciBmcm9tIFB1Yi9TdWIgZXZlbnRzLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDM6IFRyYXZlbCBJbmZvIFNlcnZpY2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29tcG9uZW50IHRyYXZlbEluZm9TZXJ2aWNlICJDb21wb25lbnRzVHJhdmVsSW5mb1NlcnZpY2UiIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQKICAgICAgICAgICAgdGl0bGUgIkxldmVsIDMg4oCTIFRyYXZlbCBJbmZvIFNlcnZpY2UgKGFzeW5jKSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlNjaGVkdWxlZCBwb2xsZXI6IGRpZmZzIHdhcm5pbmdzL3dlYXRoZXIgYWdhaW5zdCB0cmlwIHBsYW5zLCBwdWJsaXNoZXMgYWxlcnRzLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIExldmVsIDM6IE5vdGlmaWNhdGlvbiBTZXJ2aWNlIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGNvbXBvbmVudCBub3RpZmljYXRpb25TZXJ2aWNlICJDb21wb25lbnRzTm90aWZpY2F0aW9uU2VydmljZSIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgICAgICB0aXRsZSAiTGV2ZWwgMyDigJMgTm90aWZpY2F0aW9uIFNlcnZpY2UgKGFzeW5jKSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkFzeW5jIGNvbnN1bWVyOiBkZWxpdmVycyBlbWFpbCBhbmQgcHVzaCBub3RpZmljYXRpb25zLiIKICAgICAgICB9CgogICAgICAgICMg4pSA4pSAIFN0eWxlcyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBzdHlsZXMgewogICAgICAgICAgICBlbGVtZW50ICJQZXJzb24iIHsKICAgICAgICAgICAgICAgIHNoYXBlIFBlcnNvbgogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMDg0MjdCCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiU29mdHdhcmUgU3lzdGVtIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMxMTY4QkQKICAgICAgICAgICAgICAgIGNvbG9yICNmZmZmZmYKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJFeHRlcm5hbCBTeXN0ZW0iIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzZCNkI2QgogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkNvbnRhaW5lciIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjNDM4REQ1CiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQ29tcG9uZW50IiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM4NUJCRjAKICAgICAgICAgICAgICAgIGNvbG9yICMwMDAwMDAKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJXZWIgQnJvd3NlciIgewogICAgICAgICAgICAgICAgc2hhcGUgV2ViQnJvd3NlcgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkRhdGFiYXNlIiB7CiAgICAgICAgICAgICAgICBzaGFwZSBDeWxpbmRlcgogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMUI1RTIwCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiUXVldWUiIHsKICAgICAgICAgICAgICAgIHNoYXBlIFBpcGUKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgI0U2NTEwMAogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlNlcnZlciIgewogICAgICAgICAgICAgICAgc2hhcGUgUm91bmRlZEJveAogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkFzeW5jIFdvcmtlciIgewogICAgICAgICAgICAgICAgc2hhcGUgSGV4YWdvbgogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMkU3RDMyCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiRmlyZWJhc2UgU2VydmljZSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjRjU3QzAwCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiR0NQIFNlcnZpY2UiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzFBNzNFOAogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQp9",
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.warning" : "0"
+  },
+  "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "10",
+      "description" : "Nuxt 3 pages and components running in the browser.",
+      "elements" : [ {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "12",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "13",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "16",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsFrontend",
+      "name" : "Component View: TravelManager - Frontend SPA",
+      "order" : 4,
+      "title" : "Level 3 – Frontend SPA Components"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "18",
+      "description" : "Profile management and Firebase Auth integration.",
+      "elements" : [ {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "20",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "21",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsUserService",
+      "name" : "Component View: TravelManager - User Service",
+      "order" : 5,
+      "title" : "Level 3 – User Service"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "22",
+      "description" : "Core trip, location, review, likes and travel plan management. Publishes domain events.",
+      "elements" : [ {
+        "id" : "23",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "24",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "26",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "27",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "28",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsTripService",
+      "name" : "Component View: TravelManager - Trip Service",
+      "order" : 6,
+      "title" : "Level 3 – Trip Service"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "29",
+      "description" : "Destination data and B2B partner data access.",
+      "elements" : [ {
+        "id" : "30",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "31",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "33",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsDestinationService",
+      "name" : "Component View: TravelManager - Destination Service",
+      "order" : 7,
+      "title" : "Level 3 – Destination Service"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "34",
+      "description" : "Async worker: personalized live feed and newsletter from Pub/Sub events.",
+      "elements" : [ {
+        "id" : "35",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "36",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "37",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "38",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsSocialService",
+      "name" : "Component View: TravelManager - Social Service",
+      "order" : 8,
+      "title" : "Level 3 – Social Service (async)"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "39",
+      "description" : "Scheduled poller: diffs warnings/weather against trip plans, publishes alerts.",
+      "elements" : [ {
+        "id" : "40",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "41",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "42",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "43",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsTravelInfoService",
+      "name" : "Component View: TravelManager - Travel Info Service",
+      "order" : 9,
+      "title" : "Level 3 – Travel Info Service (async)"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "44",
+      "description" : "Async consumer: delivers email and push notifications.",
+      "elements" : [ {
+        "id" : "45",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "46",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "47",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "48",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ComponentsNotificationService",
+      "name" : "Component View: TravelManager - Notification Service",
+      "order" : 10,
+      "title" : "Level 3 – Notification Service (async)"
+    } ],
+    "configuration" : {
+      "styles" : {
+        "elements" : [ {
+          "background" : "#2e7d32",
+          "color" : "#ffffff",
+          "shape" : "Hexagon",
+          "tag" : "Async Worker"
+        }, {
+          "background" : "#85bbf0",
+          "color" : "#000000",
+          "tag" : "Component"
+        }, {
+          "background" : "#438dd5",
+          "color" : "#ffffff",
+          "tag" : "Container"
+        }, {
+          "background" : "#1b5e20",
+          "color" : "#ffffff",
+          "shape" : "Cylinder",
+          "tag" : "Database"
+        }, {
+          "background" : "#6b6b6b",
+          "color" : "#ffffff",
+          "tag" : "External System"
+        }, {
+          "background" : "#f57c00",
+          "color" : "#ffffff",
+          "tag" : "Firebase Service"
+        }, {
+          "background" : "#1a73e8",
+          "color" : "#ffffff",
+          "tag" : "GCP Service"
+        }, {
+          "background" : "#08427b",
+          "color" : "#ffffff",
+          "shape" : "Person",
+          "tag" : "Person"
+        }, {
+          "background" : "#e65100",
+          "color" : "#ffffff",
+          "shape" : "Pipe",
+          "tag" : "Queue"
+        }, {
+          "shape" : "RoundedBox",
+          "tag" : "Server"
+        }, {
+          "background" : "#1168bd",
+          "color" : "#ffffff",
+          "tag" : "Software System"
+        }, {
+          "shape" : "WebBrowser",
+          "tag" : "Web Browser"
+        } ]
+      },
+      "terminology" : { }
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "Runtime architecture: 6 microservices on GKE, each with its own DB, connected via Pub/Sub. GKE/Terraform infrastructure omitted for clarity.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "5",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "6",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "7",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "29",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "34",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "39",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "44",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "49",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "50",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "51",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "52",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "53",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "54",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Containers",
+      "name" : "Container View: TravelManager",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "59"
+      }, {
+        "id" : "61"
+      }, {
+        "id" : "63"
+      }, {
+        "id" : "65"
+      }, {
+        "id" : "68"
+      }, {
+        "id" : "69"
+      }, {
+        "id" : "70"
+      }, {
+        "id" : "71"
+      }, {
+        "id" : "72"
+      }, {
+        "id" : "73"
+      }, {
+        "id" : "74"
+      }, {
+        "id" : "75"
+      }, {
+        "id" : "76"
+      }, {
+        "id" : "77"
+      }, {
+        "id" : "79"
+      }, {
+        "id" : "80"
+      }, {
+        "id" : "81"
+      }, {
+        "id" : "82"
+      }, {
+        "id" : "83"
+      }, {
+        "id" : "84"
+      }, {
+        "id" : "85"
+      }, {
+        "id" : "87"
+      }, {
+        "id" : "89"
+      }, {
+        "id" : "90"
+      }, {
+        "id" : "92"
+      } ],
+      "softwareSystemId" : "8",
+      "title" : "Level 2 – Containers (Microservices)"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "How all services are hosted on GKE. Terraform provisions the cluster, Cloud SQL instances, Artifact Registry and Secret Manager.",
+      "elements" : [ {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "29",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "34",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "39",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "44",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "55",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "56",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "57",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "58",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Infrastructure",
+      "name" : "Container View: TravelManager",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "100"
+      }, {
+        "id" : "101"
+      }, {
+        "id" : "102"
+      }, {
+        "id" : "68"
+      }, {
+        "id" : "69"
+      }, {
+        "id" : "70"
+      }, {
+        "id" : "71"
+      }, {
+        "id" : "72"
+      }, {
+        "id" : "89"
+      }, {
+        "id" : "94"
+      }, {
+        "id" : "95"
+      }, {
+        "id" : "96"
+      }, {
+        "id" : "97"
+      }, {
+        "id" : "98"
+      }, {
+        "id" : "99"
+      } ],
+      "softwareSystemId" : "8",
+      "title" : "Level 2 – Deployment Infrastructure (GKE + Terraform)"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "TravelManager SaaS: end users, B2B destination managers and external dependencies.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "5",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "6",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "7",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "8",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "SystemContext",
+      "name" : "System Context View: TravelManager",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "60"
+      }, {
+        "id" : "62"
+      }, {
+        "id" : "67"
+      }, {
+        "id" : "86"
+      }, {
+        "id" : "88"
+      }, {
+        "id" : "91"
+      }, {
+        "id" : "93"
+      } ],
+      "softwareSystemId" : "8",
+      "title" : "Level 1 – System Context"
+    } ]
+  }
+}

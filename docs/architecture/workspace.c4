@@ -1,0 +1,494 @@
+specification {
+  element actor {
+    style {
+      shape person
+      color blue
+    }
+  }
+  element system {
+    style {
+      color blue
+    }
+  }
+  element service {
+    style {
+      color sky
+    }
+  }
+  element asyncWorker {
+    style {
+      shape component
+      color green
+    }
+  }
+  element database {
+    style {
+      shape cylinder
+      color green
+    }
+  }
+  element queue {
+    style {
+      shape queue
+      color amber
+    }
+  }
+  element spa {
+    style {
+      shape browser
+      color sky
+    }
+  }
+  element external {
+    style {
+      color secondary
+    }
+  }
+  element infra {
+    style {
+      color muted
+    }
+  }
+
+  relationship async {
+    color amber
+    line dashed
+  }
+}
+
+model {
+  // ── People ──────────────────────────────────────────────────────────
+  traveler = actor 'Traveler' {
+    description 'Plans, manages and shares trips. Receives travel alerts and personalized feed.'
+  }
+  destinationMgr = actor 'Destination Manager' {
+    description 'B2B partner. Manages destination services and accesses aggregated traveler data.'
+  }
+
+  // ── External Systems ─────────────────────────────────────────────────
+  firebase = external 'Firebase Auth' {
+    description 'Google identity platform. Email/password and Google OAuth. Issues signed JWT tokens.'
+    technology 'Firebase'
+  }
+  warningsApi = external 'Travel Warnings API' {
+    description 'Official government travel warning feeds (e.g. Auswärtiges Amt, FCDO).'
+    technology 'REST API'
+  }
+  weatherApi = external 'Weather API' {
+    description 'Third-party weather data provider (e.g. OpenWeatherMap).'
+    technology 'REST API'
+  }
+  sendGrid = external 'SendGrid' {
+    description 'Transactional email delivery.'
+    technology 'SMTP / HTTPS'
+  }
+
+  // ── TravelManager Platform ───────────────────────────────────────────
+  travelManager = system 'TravelManager' {
+    description 'Microservice SaaS platform. Plans: Free / Standard / Enterprise. 12-Factor, deployed on GKE via Terraform.'
+
+    // Entry point
+    apiGateway = service 'API Gateway' {
+      description 'Single entry point. Validates Firebase JWT, enforces SaaS plan rate limits, routes to downstream services.'
+      technology 'Kong / Cloud Endpoints'
+    }
+
+    // Frontend
+    spaFrontend = spa 'Frontend SPA' {
+      description 'Nuxt 3 single-page application. All API traffic routed through the API Gateway.'
+      technology 'Nuxt 3 / Vue 3'
+
+      spaTripPages = service 'Trip Pages' {
+        description 'Create, list, view and edit trips.'
+        technology 'Nuxt Page'
+      }
+      spaFeedPage = service 'Feed Page' {
+        description 'Personalized live feed (/feed).'
+        technology 'Nuxt Page'
+      }
+      spaExplorePage = service 'Explore Page' {
+        description '3D globe and destination details (/explore).'
+        technology 'Globe.gl / Nuxt Page'
+      }
+      spaPlanPage = service 'Plan Pages' {
+        description 'Itinerary builder with travel info overlay (/plan, /plan-view).'
+        technology 'Nuxt Page'
+      }
+      spaAlertBanner = service 'Alert Banner' {
+        description 'Displays active travel warnings and weather alerts.'
+        technology 'Nuxt Component'
+      }
+      spaCommunity = service 'Community Page' {
+        description 'Browse all public trips (/community).'
+        technology 'Nuxt Page'
+      }
+      spaProfile = service 'Profile Page' {
+        description 'User profile management (/profile).'
+        technology 'Nuxt Page'
+      }
+    }
+
+    // ── Synchronous Microservices ─────────────────────────────────────
+    userService = service 'User Service' {
+      description 'User accounts and profiles. Upserts users on first Firebase login.'
+      technology 'Node.js / Nitro'
+
+      userController = service 'User Controller' {
+        description 'POST /users (upsert), GET /users/me, GET /users/:id, PUT /users/:id.'
+        technology 'Route Handler'
+      }
+      userRepo = database 'User Repository' {
+        description 'Read/write user rows in User DB.'
+        technology 'node-postgres'
+      }
+      authVerifier = service 'Auth Verifier' {
+        description 'Shared Firebase Admin SDK middleware – verifies JWT on every request.'
+        technology 'Firebase Admin SDK'
+      }
+    }
+
+    tripService = service 'Trip Service' {
+      description 'Core trip management: trips, locations, travel plans, reviews and likes.'
+      technology 'Node.js / Nitro'
+
+      tripController = service 'Trip Controller' {
+        description 'CRUD /trips, /trips/:id, GET /trips/all (public).'
+        technology 'Route Handler'
+      }
+      locationController = service 'Location Controller' {
+        description 'CRUD /locations/trip/:tripId, /locations/:id.'
+        technology 'Route Handler'
+      }
+      reviewController = service 'Review Controller' {
+        description 'POST/GET/DELETE /reviews/trip/:tripId.'
+        technology 'Route Handler'
+      }
+      likesController = service 'Likes Controller' {
+        description 'POST/DELETE/GET /likes/trip/:tripId.'
+        technology 'Route Handler'
+      }
+      planController = service 'Plan Controller' {
+        description 'CRUD /travel-plans/:tripId.'
+        technology 'Route Handler'
+      }
+      tripEventPublisher = service 'Event Publisher' {
+        description 'Publishes TripCreated / TripUpdated events to Pub/Sub after writes.'
+        technology 'GCP Pub/Sub'
+      }
+    }
+
+    destinationService = service 'Destination Service' {
+      description 'Manages destinations, routes, transport and accommodation. Provides B2B data access.'
+      technology 'Node.js / Nitro'
+
+      destController = service 'Destination Controller' {
+        description 'GET /destinations, GET /destinations/:id/routes.'
+        technology 'Route Handler'
+      }
+      optionsController = service 'Options Controller' {
+        description 'GET /destinations/:id/transport, /accommodation.'
+        technology 'Route Handler'
+      }
+      b2bController = service 'B2B Controller' {
+        description 'GET /b2b/destinations/:id/travelers – aggregated marketing data for partners.'
+        technology 'Route Handler'
+      }
+      destRepo = database 'Destination Repository' {
+        description 'Reads destination data from Destination DB.'
+        technology 'node-postgres'
+      }
+    }
+
+    // ── Async Microservices ───────────────────────────────────────────
+    socialService = asyncWorker 'Social Service' {
+      description 'Builds personalized live feeds and newsletters by consuming trip events asynchronously.'
+      technology 'Node.js / Worker'
+
+      feedConsumer = service 'Feed Consumer' {
+        description 'Subscribes to TripCreated/Updated. Scores relevance per follower.'
+        technology 'Pub/Sub Subscriber'
+      }
+      feedBuilder = service 'Feed Builder' {
+        description 'Assembles and stores personalized feed entries.'
+        technology 'Worker'
+      }
+      feedApi = service 'Feed API' {
+        description 'GET /feed – returns pre-computed feed for authenticated user.'
+        technology 'Route Handler'
+      }
+      newsletterJob = service 'Newsletter CronJob' {
+        description 'Scheduled: aggregates weekly highlights, publishes NewsletterReady event.'
+        technology 'Kubernetes CronJob'
+      }
+    }
+
+    travelInfoService = asyncWorker 'Travel Info Service' {
+      description 'Polls travel warnings and weather, diffs against active trip plans, publishes alerts.'
+      technology 'Node.js / Worker'
+
+      warningPoller = service 'Warning Poller' {
+        description 'CronJob: fetches official travel warnings from external API.'
+        technology 'Kubernetes CronJob'
+      }
+      weatherPoller = service 'Weather Poller' {
+        description 'CronJob: fetches weather forecasts for all destination cities.'
+        technology 'Kubernetes CronJob'
+      }
+      diffEngine = service 'Diff Engine' {
+        description 'Compares new data with active travel plans. Identifies affected users.'
+        technology 'Business Logic'
+      }
+      alertPublisher = service 'Alert Publisher' {
+        description 'Publishes TravelAlert events to Pub/Sub.'
+        technology 'Pub/Sub Publisher'
+      }
+    }
+
+    notificationService = asyncWorker 'Notification Service' {
+      description 'Consumes events from Pub/Sub. Delivers email and push notifications.'
+      technology 'Node.js / Worker'
+
+      alertConsumer = service 'Alert Consumer' {
+        description 'Subscribes to TravelAlert events.'
+        technology 'Pub/Sub Subscriber'
+      }
+      newsletterConsumer = service 'Newsletter Consumer' {
+        description 'Subscribes to NewsletterReady events.'
+        technology 'Pub/Sub Subscriber'
+      }
+      emailSender = service 'Email Sender' {
+        description 'Sends transactional emails via SendGrid.'
+        technology 'SendGrid SDK'
+      }
+      pushSender = service 'Push Sender' {
+        description 'Delivers browser Web Push notifications.'
+        technology 'Web Push API'
+      }
+    }
+
+    // ── Databases (one per service) ───────────────────────────────────
+    userDB = database 'User DB' {
+      description 'User profiles and account data.'
+      technology 'PostgreSQL 16'
+    }
+    tripDB = database 'Trip DB' {
+      description 'Trips, locations, travel plans, reviews and likes.'
+      technology 'PostgreSQL 16'
+    }
+    destDB = database 'Destination DB' {
+      description 'Destinations, routes, transport and accommodation options.'
+      technology 'PostgreSQL 16'
+    }
+    socialDB = database 'Social DB' {
+      description 'Feed entries, follow graph and newsletter log.'
+      technology 'PostgreSQL 16'
+    }
+    travelInfoDB = database 'Travel Info DB' {
+      description 'Cached warnings, weather snapshots and alert log.'
+      technology 'PostgreSQL 16'
+    }
+
+    // ── Message Bus ───────────────────────────────────────────────────
+    messageBus = queue 'Message Bus' {
+      description 'Topics: TripCreated, TripUpdated, TravelAlert, NewsletterReady.'
+      technology 'GCP Pub/Sub'
+    }
+
+    // ── Infrastructure ────────────────────────────────────────────────
+    gkeCluster = infra 'GKE Cluster' {
+      description 'Kubernetes cluster. All services as Deployments with HPA. CronJobs for scheduled workers. Provisioned via Terraform.'
+      technology 'Google Kubernetes Engine'
+    }
+    secretMgr = infra 'Secret Manager' {
+      description 'DB connection strings, Firebase config and API keys. Mounted as K8s Secrets via ESO.'
+      technology 'GCP Secret Manager'
+    }
+  }
+
+  // ── Relationships ──────────────────────────────────────────────────
+
+  // Clients → System
+  traveler -> spaFrontend 'Uses web app' {
+    technology 'HTTPS'
+  }
+  destinationMgr -> apiGateway 'Accesses B2B data API' {
+    technology 'HTTPS / JSON'
+  }
+
+  // Frontend → Gateway
+  spaFrontend -> apiGateway 'All API calls with Bearer token' {
+    technology 'HTTPS / JSON'
+  }
+
+  // Gateway → Auth + Services
+  apiGateway -> firebase 'Validate JWT' {
+    technology 'Firebase Admin SDK'
+  }
+  apiGateway -> userService 'Route /users/*' {
+    technology 'HTTPS / JSON'
+  }
+  apiGateway -> tripService 'Route /trips/*, /locations/*, /reviews/*, /likes/*, /travel-plans/*' {
+    technology 'HTTPS / JSON'
+  }
+  apiGateway -> destinationService 'Route /destinations/*, /b2b/*' {
+    technology 'HTTPS / JSON'
+  }
+  apiGateway -> socialService 'Route /feed' {
+    technology 'HTTPS / JSON'
+  }
+  apiGateway -> travelInfoService 'Route /alerts' {
+    technology 'HTTPS / JSON'
+  }
+
+  // Services → own DB
+  userService -> userDB 'Read / Write' {
+    technology 'node-postgres'
+  }
+  tripService -> tripDB 'Read / Write' {
+    technology 'node-postgres'
+  }
+  destinationService -> destDB 'Read / Write' {
+    technology 'node-postgres'
+  }
+  socialService -> socialDB 'Read / Write' {
+    technology 'node-postgres'
+  }
+  travelInfoService -> travelInfoDB 'Read / Write' {
+    technology 'node-postgres'
+  }
+
+  // Auth
+  userService -> firebase 'Upsert user on first login' {
+    technology 'Firebase Admin SDK'
+  }
+
+  // Async event flows
+  tripService -[async]-> messageBus 'Publish TripCreated / TripUpdated'
+  socialService -[async]-> messageBus 'Subscribe TripCreated / TripUpdated'
+  socialService -[async]-> messageBus 'Publish NewsletterReady'
+  travelInfoService -[async]-> messageBus 'Publish TravelAlert'
+  notificationService -[async]-> messageBus 'Subscribe TravelAlert, NewsletterReady'
+
+  // Travel Info → External
+  travelInfoService -[async]-> warningsApi 'Poll travel warnings (scheduled)'
+  travelInfoService -[async]-> weatherApi 'Poll weather forecasts (scheduled)'
+  travelInfoService -> tripService 'GET active travel plans for diff' {
+    technology 'HTTPS / JSON'
+  }
+
+  // Notifications → External + User
+  notificationService -[async]-> sendGrid 'Send transactional emails'
+  notificationService -[async]-> traveler 'Push notification / email'
+}
+
+views {
+  // ── Level 1: System Context ──────────────────────────────────────────
+  view index {
+    title 'Level 1 – System Context'
+    description 'TravelManager SaaS: end users, B2B partners and external dependencies.'
+
+    include traveler, destinationMgr
+    include travelManager
+    include firebase, warningsApi, weatherApi, sendGrid
+
+    autoLayout LeftRight
+  }
+
+  // ── Level 2: Containers ──────────────────────────────────────────────
+  view containers of travelManager {
+    title 'Level 2 – Containers (Microservices)'
+    description 'Runtime architecture: 6 microservices on GKE, each with its own DB, connected via Pub/Sub.'
+
+    include traveler, destinationMgr
+    include apiGateway, spaFrontend
+    include userService, tripService, destinationService
+    include socialService, travelInfoService, notificationService
+    include messageBus
+    include userDB, tripDB, destDB, socialDB, travelInfoDB
+    include firebase, warningsApi, weatherApi, sendGrid
+
+    autoLayout LeftRight
+    style tripService {
+      color indigo
+    }
+    style userService {
+      color indigo
+    }
+    style destinationService {
+      color indigo
+    }
+    style notificationService {
+      color indigo
+    }
+    style travelInfoService {
+      color indigo
+    }
+  }
+
+  // ── Level 2: Deployment / Infrastructure ────────────────────────────
+  view infrastructure of travelManager {
+    title 'Level 2 – Deployment Infrastructure (GKE + Terraform)'
+    description 'How all services are hosted. Terraform provisions cluster, Cloud SQL instances and Secret Manager.'
+
+    include gkeCluster, secretMgr
+    include apiGateway
+    include userService, tripService, destinationService
+    include socialService, travelInfoService, notificationService
+
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Frontend SPA ────────────────────────────────────────────
+  view frontend of spaFrontend {
+    title 'Level 3 – Frontend SPA'
+    include *
+    autoLayout TopBottom
+  }
+
+  // ── Level 3: User Service ────────────────────────────────────────────
+  view userSvc of userService {
+    title 'Level 3 – User Service'
+    include *
+    include firebase
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Trip Service ────────────────────────────────────────────
+  view tripSvc of tripService {
+    title 'Level 3 – Trip Service'
+    include *
+    include messageBus
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Destination Service ─────────────────────────────────────
+  view destSvc of destinationService {
+    title 'Level 3 – Destination Service'
+    include *
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Social Service ──────────────────────────────────────────
+  view socialSvc of socialService {
+    title 'Level 3 – Social Service (async)'
+    include *
+    include messageBus
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Travel Info Service ─────────────────────────────────────
+  view travelInfoSvc of travelInfoService {
+    title 'Level 3 – Travel Info Service (async)'
+    include *
+    include messageBus, warningsApi, weatherApi, tripService
+    autoLayout LeftRight
+  }
+
+  // ── Level 3: Notification Service ────────────────────────────────────
+  view notifSvc of notificationService {
+    title 'Level 3 – Notification Service (async)'
+    include *
+    include messageBus, sendGrid, traveler
+    autoLayout LeftRight
+  }
+}

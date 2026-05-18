@@ -46,10 +46,14 @@ services:
       - "8080"
     ports:
       - "127.0.0.1:3000:8080"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/travelmanager
       - NITRO_HOST=0.0.0.0
       - NITRO_PORT=8080
+    # Cloud Run / GCE: firebase-admin uses the runtime service account via the
+    # metadata server — no file mount needed.
     depends_on:
       postgres:
         condition: service_healthy

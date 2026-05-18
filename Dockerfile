@@ -2,9 +2,11 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Dependencies
 COPY package*.json ./
 RUN npm ci
 
+# App source
 COPY . .
 
 # Build Nuxt for production (Nitro output)

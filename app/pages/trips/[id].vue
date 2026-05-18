@@ -26,6 +26,7 @@
         <div class="trip-detail-header">
           <h1>{{ trip.title }}</h1>
           <div class="trip-detail-meta">
+            <span v-if="trip.origin" class="badge badge-dest">🛫 {{ trip.origin }}</span>
             <span class="badge badge-dest">📍 {{ trip.destination }}</span>
             <span class="badge badge-date">📅 {{ formatDate(trip.start_date) }}</span>
           </div>
@@ -44,12 +45,60 @@
         </div>
       </div>
 
+      <!-- ── Likes section ── -->
+      <div class="likes-section">
+        <div class="likes-bar">
+          <button
+            class="btn-like"
+            :class="{ 'btn-like--active': hasLiked }"
+            :disabled="likeLoading"
+            @click="toggleLike"
+          >
+            {{ hasLiked ? '♥' : '♡' }} {{ likes.count }} {{ likes.count === 1 ? 'Like' : 'Likes' }}
+          </button>
+          <button
+            v-if="likes.comments.length"
+            class="btn-comments-toggle"
+            @click="showComments = !showComments"
+          >
+            {{ showComments ? 'Hide comments' : `${likes.comments.length} comment${likes.comments.length > 1 ? 's' : ''}` }}
+          </button>
+        </div>
+
+        <div v-if="user && !isOwner" class="like-comment-input">
+          <input
+            v-model="myLikeComment"
+            type="text"
+            maxlength="200"
+            :placeholder="hasLiked ? 'Edit your comment…' : 'Add a comment with your like… (optional)'"
+          />
+          <button
+            v-if="hasLiked"
+            class="btn-save-comment"
+            :disabled="likeLoading || myLikeComment === existingLikeComment"
+            @click="saveLikeComment"
+          >Save</button>
+        </div>
+
+        <Transition name="form-slide">
+          <div v-if="showComments && likes.comments.length" class="like-comments-list">
+            <div v-for="c in likes.comments" :key="c.userId" class="like-comment">
+              <span class="like-comment-avatar">{{ c.userName.charAt(0).toUpperCase() }}</span>
+              <div>
+                <span class="like-comment-name">{{ c.userName }}</span>
+                <p class="like-comment-text">{{ c.comment }}</p>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </div>
+
       <!-- ── Reviews section ── -->
       <div class="reviews-section">
         <h2 class="reviews-title">Reviews</h2>
 
         <!-- Write / edit review (only for non-owners) -->
-        <div v-if="user && trip.user_id !== user.id" class="review-form-card">
+        <div v-if="user && trip.user_uid !== user.firebase_uid" class="review-form-card">
           <h3>{{ myReview ? 'Edit your review' : 'Leave a review' }}</h3>
           <div class="star-picker">
             <button
@@ -94,6 +143,15 @@
         <p v-else class="reviews-empty">No reviews yet. Be the first to share your thoughts!</p>
       </div>
 
+      <!-- ── Live Offers section ── -->
+      <div class="live-offers-section">
+        <LiveOffers
+          :origin="trip.origin"
+          :destination="trip.destination"
+          :date-from="trip.start_date"
+        />
+      </div>
+
       <!-- ── Travel Plan section ── -->
       <div class="plan-section">
         <div class="plan-section-header">
@@ -107,7 +165,7 @@
             <NuxtLink v-if="travelPlan" :to="`/plan-view/${trip.id}`" class="btn btn-gold">
               View Full Plan →
             </NuxtLink>
-            <NuxtLink v-if="isOwner" :to="`/plan/${trip.id}`" class="btn btn-outline">
+            <NuxtLink v-if="isOwner" :to="planEditLink" class="btn btn-outline">
               {{ travelPlan ? '✏ Edit' : '+ Create Plan' }}
             </NuxtLink>
           </div>
@@ -160,8 +218,8 @@
           <p v-if="isOwner">No travel plan yet. Choose from 15 European destinations with pre-suggested routes, transport and accommodation options.</p>
           <p v-else>No travel plan has been created for this trip yet.</p>
           <div v-if="isOwner" class="plan-empty-actions">
-            <NuxtLink :to="`/plan/${trip.id}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
-            <NuxtLink to="/explore" class="btn btn-outline">🌍 Explore on Globe</NuxtLink>
+            <NuxtLink :to="`/plan/${trip.id}?mode=custom`" class="btn btn-gold">Create My Own Plan</NuxtLink>
+            <NuxtLink to="/explore" class="btn btn-outline">🌍 Pick from Globe</NuxtLink>
           </div>
         </div>
       </div>
@@ -170,35 +228,84 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
+const { apiFetch } = useApiFetch()
 const route = useRoute()
 const router = useRouter()
 
-const trip         = ref(null)
-const loading      = ref(true)
-const editing      = ref(false)
-const deleting     = ref(false)
-const travelPlan   = ref(null)
-const deletingPlan = ref(false)
+const trip             = ref(null)
+const loading          = ref(true)
+const editing          = ref(false)
+const deleting         = ref(false)
+const travelPlanData   = ref(null)
+const deletingPlan     = ref(false)
 
-const reviews    = ref([])
-const formStars  = ref(0)
+// Normalize custom plans to the same field names the markup uses for template
+// plans, so the summary block doesn't need separate branches.
+const travelPlan = computed(() => {
+  const p = travelPlanData.value
+  if (!p) return null
+  if (p.mode === 'custom') {
+    return {
+      ...p,
+      emoji:               '📍',
+      country:             p.custom_destination || trip.value?.destination || 'Custom trip',
+      city:                '',
+      route_name:          p.custom_route_name,
+      duration_days:       p.custom_duration_days ?? 0,
+      transport_type:      p.custom_transport_type,
+      provider:            p.custom_transport_provider,
+      transport_duration:  p.custom_transport_duration,
+      price_from:          p.custom_transport_price_from ?? 0,
+      accommodation_type:  p.custom_accommodation_type,
+      accommodation_name:  p.custom_accommodation_name,
+      price_per_night:     p.custom_accommodation_price_per_night ?? 0,
+      rating:              p.custom_accommodation_rating ?? 0,
+    }
+  }
+  return p
+})
+
+const reviews     = ref([])
+const formStars   = ref(0)
 const formComment = ref('')
-const submitting = ref(false)
+const submitting  = ref(false)
 
-const isOwner  = computed(() => !!user.value && trip.value?.user_id === user.value.id)
-const myReview = computed(() => reviews.value.find(r => r.reviewer_id === user.value?.id) ?? null)
+const likes          = ref({ count: 0, comments: [], likedUserIds: [] })
+const likeLoading    = ref(false)
+const showComments   = ref(false)
+const myLikeComment  = ref('')
+
+const isOwner  = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
+const myReview = computed(() => reviews.value.find(r => r.reviewer_id === user.value?.firebase_uid) ?? null)
+
+// Edit link routes the user back to the wizard. For brand-new plans we default
+// to the custom flow (own-trip path). Existing plans drop the query — the
+// plan page re-reads `mode` from the saved row.
+const planEditLink = computed(() => {
+  if (!trip.value) return ''
+  return travelPlan.value
+    ? `/plan/${trip.value.id}`
+    : `/plan/${trip.value.id}?mode=custom`
+})
+const hasLiked = computed(() => user.value ? likes.value.likedUserIds.includes(user.value.firebase_uid) : false)
+const existingLikeComment = computed(() => {
+  if (!user.value) return ''
+  const mine = likes.value.comments.find(c => c.userId === user.value.firebase_uid)
+  return mine?.comment ?? ''
+})
 
 onMounted(async () => {
+  await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   await fetchTrip()
-  await Promise.all([fetchPlan(), fetchReviews()])
+  await Promise.all([fetchPlan(), fetchReviews(), fetchLikes()])
 })
 
 async function fetchTrip() {
   loading.value = true
   try {
-    trip.value = await $fetch(`/api/trips/${route.params.id}`)
+    trip.value = await apiFetch(`/api/trips/${route.params.id}`)
   } catch {
     router.push('/trips')
   } finally {
@@ -208,15 +315,62 @@ async function fetchTrip() {
 
 async function fetchPlan() {
   try {
-    travelPlan.value = await $fetch(`/api/travel-plans/${route.params.id}`)
+    travelPlanData.value = await apiFetch(`/api/travel-plans/${route.params.id}`)
   } catch {
-    travelPlan.value = null
+    travelPlanData.value = null
+  }
+}
+
+async function fetchLikes() {
+  try {
+    likes.value = await $fetch(`/api/likes/trip/${route.params.id}`)
+  } catch {
+    likes.value = { count: 0, comments: [], likedUserIds: [] }
+  }
+  // Pre-fill input with the user's stored comment so they can edit it.
+  if (hasLiked.value) myLikeComment.value = existingLikeComment.value
+}
+
+async function toggleLike() {
+  if (!user.value) return navigateTo('/register')
+  likeLoading.value = true
+  try {
+    if (hasLiked.value) {
+      await apiFetch(`/api/likes/trip/${route.params.id}`, { method: 'DELETE' })
+    } else {
+      await apiFetch(`/api/likes/trip/${route.params.id}`, {
+        method: 'POST',
+        body: { comment: myLikeComment.value },
+      })
+      myLikeComment.value = ''
+    }
+    await fetchLikes()
+  } catch (err) {
+    alert(err.data?.statusMessage || 'Could not update like')
+  } finally {
+    likeLoading.value = false
+  }
+}
+
+async function saveLikeComment() {
+  if (!user.value) return navigateTo('/register')
+  likeLoading.value = true
+  try {
+    await apiFetch(`/api/likes/trip/${route.params.id}`, {
+      method: 'POST',
+      body: { comment: myLikeComment.value },
+    })
+    await fetchLikes()
+  } catch (err) {
+    alert(err.data?.statusMessage || 'Could not save comment')
+  } finally {
+    likeLoading.value = false
   }
 }
 
 async function fetchReviews() {
   try {
-    reviews.value = await $fetch(`/api/reviews/trip/${route.params.id}`)
+    reviews.value = await apiFetch(`/api/reviews/trip/${route.params.id}`)
     if (myReview.value) {
       formStars.value   = myReview.value.stars
       formComment.value = myReview.value.comment
@@ -230,9 +384,9 @@ async function submitReview() {
   if (!formStars.value) return
   submitting.value = true
   try {
-    await $fetch(`/api/reviews/trip/${route.params.id}`, {
+    await apiFetch(`/api/reviews/trip/${route.params.id}`, {
       method: 'POST',
-      body: { reviewer_id: user.value.id, stars: formStars.value, comment: formComment.value },
+      body: { stars: formStars.value, comment: formComment.value },
     })
     await fetchReviews()
   } catch (err) {
@@ -246,10 +400,7 @@ async function deleteMyReview() {
   if (!confirm('Delete your review?')) return
   submitting.value = true
   try {
-    await $fetch(`/api/reviews/${myReview.value.id}`, {
-      method: 'DELETE',
-      body: { reviewer_id: user.value.id },
-    })
+    await apiFetch(`/api/reviews/trip/${route.params.id}`, { method: 'DELETE' })
     formStars.value   = 0
     formComment.value = ''
     await fetchReviews()
@@ -269,7 +420,7 @@ async function deleteTrip() {
   if (!confirm(`Delete "${trip.value.title}"? This cannot be undone.`)) return
   deleting.value = true
   try {
-    await $fetch(`/api/trips/${trip.value.id}`, { method: 'DELETE' })
+    await apiFetch(`/api/trips/${trip.value.id}`, { method: 'DELETE' })
     router.push('/trips')
   } catch (err) {
     alert(err.data?.statusMessage || 'Delete failed')
@@ -281,8 +432,8 @@ async function deletePlan() {
   if (!confirm('Remove the travel plan for this trip?')) return
   deletingPlan.value = true
   try {
-    await $fetch(`/api/travel-plans/${trip.value.id}`, { method: 'DELETE' })
-    travelPlan.value = null
+    await apiFetch(`/api/travel-plans/${trip.value.id}`, { method: 'DELETE' })
+    travelPlanData.value = null
   } catch (err) {
     alert(err.data?.statusMessage || 'Could not remove plan')
   } finally {
@@ -304,6 +455,14 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
 .detail-actions {
   display: flex;
   gap: 12px;
+}
+
+.live-offers-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px 36px;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
 }
 
 /* ── Travel Plan section ── */
@@ -474,6 +633,129 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* ── Likes ── */
+.likes-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px 44px;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+.likes-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.btn-like {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: 2px solid var(--sand-dark);
+  border-radius: 100px;
+  background: var(--white);
+  color: var(--navy);
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.btn-like:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.07);
+}
+.btn-like--active {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.1);
+  color: var(--navy);
+}
+.btn-like:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-comments-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.btn-comments-toggle:hover { color: var(--navy); }
+
+.like-comment-input {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.like-comment-input input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1.5px solid var(--sand-dark);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  background: var(--sand);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+.like-comment-input input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: var(--white);
+}
+.btn-save-comment {
+  padding: 0 16px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.btn-save-comment:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.like-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.like-comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.like-comment-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.like-comment-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--navy);
+  display: block;
+  margin-bottom: 2px;
+}
+.like-comment-text {
+  font-size: 0.85rem;
+  color: #444;
+  line-height: 1.5;
 }
 
 /* ── Reviews ── */

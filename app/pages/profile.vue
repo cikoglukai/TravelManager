@@ -4,6 +4,10 @@
       <NuxtLink to="/trips" class="btn btn-back">← My Trips</NuxtLink>
     </div>
 
+    <div v-if="$route.query.setup" class="setup-banner">
+      Welcome! Complete your profile to get started.
+    </div>
+
     <div v-if="pending" class="loading">Loading profile…</div>
 
     <template v-else-if="profile">
@@ -162,21 +166,31 @@
 </template>
 
 <script setup>
-const { user, setUser } = useAuth()
+import { getStorage, ref as storageRef, deleteObject } from 'firebase/storage'
+const { user, setUser, waitAuthReady } = useAuth()
+const { apiFetch } = useApiFetch()
+const { uploadImage } = useImageUpload()
 
-// Guard: redirect to register if not logged in
-onMounted(() => {
-  if (!user.value) navigateTo('/register')
+const profile = ref(null)
+const trips   = ref([])
+const pending = ref(true)
+
+onMounted(async () => {
+  await waitAuthReady()
+  if (!user.value) return navigateTo('/register')
+  const uid = user.value.firebase_uid
+  try {
+    const [p, t] = await Promise.all([
+      apiFetch(`/api/users/${uid}`),
+      apiFetch('/api/trips'),
+    ])
+    profile.value = p
+    trips.value   = t
+  } finally {
+    pending.value = false
+  }
 })
 
-// ── Data fetching ────────────────────────────────────────────────────────────
-
-const [{ data: profile, pending }, { data: trips }] = await Promise.all([
-  useFetch(() => `/api/users/${user.value?.id}`, { key: 'profile' }),
-  useFetch(() => `/api/trips?userId=${user.value?.id}`, { key: 'profile-trips' }),
-])
-
-// Ensure arrays / objects even while loading
 const safeTrips = computed(() => trips.value ?? [])
 
 // ── Computed display values ──────────────────────────────────────────────────
@@ -238,8 +252,10 @@ async function onAvatarFileChange(e) {
   avatarUploading.value = true
   avatarError.value = ''
   try {
-    const dataUrl = await compressAvatar(file)
-    await uploadAvatar(dataUrl)
+    const blob = await compressAvatarToBlob(file)
+    const path = `avatars/${user.value.firebase_uid}/${Date.now()}.jpg`
+    const url = await uploadImage(blob, path)
+    await uploadAvatar(url)
   } catch (err) {
     avatarError.value = err.data?.statusMessage || err.message || 'Upload failed.'
   } finally {
@@ -251,6 +267,11 @@ async function removeAvatar() {
   avatarUploading.value = true
   avatarError.value = ''
   try {
+    const oldUrl = profile.value.avatar_url
+    if (oldUrl?.includes('firebasestorage')) {
+      const storage = getStorage()
+      await deleteObject(storageRef(storage, oldUrl)).catch(() => {})
+    }
     await uploadAvatar('')
   } catch (err) {
     avatarError.value = err.data?.statusMessage || err.message || 'Could not remove photo.'
@@ -260,7 +281,7 @@ async function removeAvatar() {
 }
 
 async function uploadAvatar(dataUrl) {
-  const updated = await $fetch(`/api/users/${user.value.id}`, {
+  const updated = await apiFetch(`/api/users/${user.value.firebase_uid}`, {
     method: 'PATCH',
     body: { avatar_url: dataUrl },
   })
@@ -268,8 +289,7 @@ async function uploadAvatar(dataUrl) {
   Object.assign(profile.value, updated)
 }
 
-// Compress image to square-ish JPEG, max 320 px side, quality 0.82
-function compressAvatar(file) {
+function compressAvatarToBlob(file) {
   return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -283,7 +303,10 @@ function compressAvatar(file) {
       canvas.width  = w
       canvas.height = h
       canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-      resolve(canvas.toDataURL('image/jpeg', 0.82))
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error('Could not compress image.'))
+      }, 'image/jpeg', 0.82)
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image.')) }
     img.src = url
@@ -315,13 +338,11 @@ async function saveProfile() {
   saveError.value = ''
   saving.value    = true
   try {
-    const updated = await $fetch(`/api/users/${user.value.id}`, {
+    const updated = await apiFetch(`/api/users/${user.value.firebase_uid}`, {
       method: 'PUT',
       body: { name: form.name, bio: form.bio, home_city: form.home_city },
     })
-    // Reflect changes in global auth state + localStorage
     setUser(updated)
-    // Update the local reactive profile without a full re-fetch
     Object.assign(profile.value, updated)
     editing.value = false
   } catch (err) {
@@ -333,6 +354,19 @@ async function saveProfile() {
 </script>
 
 <style scoped>
+/* ── Setup banner ── */
+.setup-banner {
+  background: rgba(201,168,76,0.12);
+  border: 1.5px solid rgba(201,168,76,0.35);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  color: var(--navy);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
 /* ── Card ── */
 .profile-card {
   background: var(--white);

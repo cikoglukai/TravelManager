@@ -96,6 +96,14 @@
               placeholder="What makes this place special? Opening hours, tips, must-sees…"
             ></textarea>
           </div>
+          <div class="lm-field">
+            <label>Visit Dates <span class="lm-hint">(optional)</span></label>
+            <div class="lm-date-row">
+              <input v-model="form.date_from" type="date" />
+              <span class="lm-date-sep">→</span>
+              <input v-model="form.date_to" type="date" :min="form.date_from || undefined" />
+            </div>
+          </div>
         </div>
 
         <p v-if="formError" class="lm-form-error">{{ formError }}</p>
@@ -139,6 +147,9 @@
           <h4 class="lm-card-name">{{ loc.name }}</h4>
           <p v-if="loc.description" class="lm-card-desc">{{ loc.description }}</p>
           <p v-else class="lm-card-desc lm-card-desc--empty">No description added.</p>
+          <p v-if="loc.date_from || loc.date_to" class="lm-card-dates">
+            📅 {{ loc.date_from ? formatDate(loc.date_from) : '—' }}{{ loc.date_to ? ' → ' + formatDate(loc.date_to) : '' }}
+          </p>
         </div>
       </div>
     </div>
@@ -157,6 +168,8 @@
 const props = defineProps({
   tripId: { type: Number, required: true },
 })
+const { apiFetch } = useApiFetch()
+const { uploadImage } = useImageUpload()
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const locations  = ref([])
@@ -170,7 +183,7 @@ const isDragging = ref(false)
 const urlInput   = ref('')
 const fileInput  = ref(null)
 
-const form = reactive({ name: '', description: '', image_url: '' })
+const form = reactive({ name: '', description: '', image_url: '', date_from: '', date_to: '' })
 
 // ── Load locations ────────────────────────────────────────────────────────────
 onMounted(fetchLocations)
@@ -178,7 +191,7 @@ onMounted(fetchLocations)
 async function fetchLocations() {
   loading.value = true
   try {
-    locations.value = await $fetch(`/api/locations/trip/${props.tripId}`)
+    locations.value = await apiFetch(`/api/locations/trip/${props.tripId}`)
   } catch {
     locations.value = []
   } finally {
@@ -192,6 +205,8 @@ function openAddForm() {
   form.name           = ''
   form.description    = ''
   form.image_url      = ''
+  form.date_from      = ''
+  form.date_to        = ''
   urlInput.value      = ''
   formError.value     = ''
   imageError.value    = ''
@@ -203,6 +218,8 @@ function startEdit(loc) {
   form.name           = loc.name
   form.description    = loc.description
   form.image_url      = loc.image_url
+  form.date_from      = loc.date_from ? loc.date_from.slice(0, 10) : ''
+  form.date_to        = loc.date_to   ? loc.date_to.slice(0, 10)   : ''
   urlInput.value      = loc.image_url.startsWith('http') ? loc.image_url : ''
   formError.value     = ''
   imageError.value    = ''
@@ -237,10 +254,12 @@ async function processFile(file) {
     return
   }
   try {
-    form.image_url = await compressToDataUrl(file)
+    const blob = await compressToBlob(file)
+    const path = `locations/${props.tripId}/${Date.now()}.jpg`
+    form.image_url = await uploadImage(blob, path)
     urlInput.value = ''
   } catch {
-    imageError.value = 'Could not process the image. Please try another file.'
+    imageError.value = 'Could not upload image. Please try another file.'
   }
 }
 
@@ -262,8 +281,7 @@ function clearImage() {
   if (fileInput.value) fileInput.value.value = ''
 }
 
-// Client-side image compression using Canvas API
-function compressToDataUrl(file, maxWidth = 1400, quality = 0.78) {
+function compressToBlob(file, maxWidth = 1400, quality = 0.78) {
   return new Promise((resolve, reject) => {
     const img    = new Image()
     const objUrl = URL.createObjectURL(file)
@@ -273,10 +291,12 @@ function compressToDataUrl(file, maxWidth = 1400, quality = 0.78) {
       const canvas = document.createElement('canvas')
       canvas.width  = Math.round(img.width  * scale)
       canvas.height = Math.round(img.height * scale)
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(objUrl)
-      resolve(canvas.toDataURL('image/jpeg', quality))
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error('compression failed'))
+      }, 'image/jpeg', quality)
     }
     img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('load error')) }
     img.src     = objUrl
@@ -288,19 +308,28 @@ async function submit() {
   formError.value = ''
   if (!form.name.trim()) { formError.value = 'Name is required.'; return }
 
+  if (form.date_from && form.date_to && form.date_to < form.date_from) {
+    formError.value = '"To" date must be on or after "From" date.'
+    return
+  }
+
   saving.value = true
   try {
+    const datePayload = {
+      date_from: form.date_from || null,
+      date_to:   form.date_to   || null,
+    }
     if (editingId.value) {
-      const updated = await $fetch(`/api/locations/${editingId.value}`, {
+      const updated = await apiFetch(`/api/locations/${editingId.value}`, {
         method: 'PUT',
-        body: { name: form.name, description: form.description, image_url: form.image_url },
+        body: { name: form.name, description: form.description, image_url: form.image_url, ...datePayload },
       })
       const idx = locations.value.findIndex(l => l.id === editingId.value)
       if (idx !== -1) locations.value[idx] = updated
     } else {
-      const created = await $fetch(`/api/locations/trip/${props.tripId}`, {
+      const created = await apiFetch(`/api/locations/trip/${props.tripId}`, {
         method: 'POST',
-        body: { name: form.name, description: form.description, image_url: form.image_url },
+        body: { name: form.name, description: form.description, image_url: form.image_url, ...datePayload },
       })
       locations.value.push(created)
     }
@@ -312,11 +341,15 @@ async function submit() {
   }
 }
 
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 // ── Delete ────────────────────────────────────────────────────────────────────
 async function remove(loc) {
   if (!confirm(`Remove "${loc.name}" from this trip?`)) return
   try {
-    await $fetch(`/api/locations/${loc.id}`, { method: 'DELETE' })
+    await apiFetch(`/api/locations/${loc.id}`, { method: 'DELETE' })
     locations.value = locations.value.filter(l => l.id !== loc.id)
     if (editingId.value === loc.id) closeForm()
   } catch (err) {
@@ -458,6 +491,27 @@ async function remove(loc) {
   color: var(--error);
   font-size: 0.8rem;
   margin-top: 6px;
+}
+
+.lm-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.lm-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lm-date-row input {
+  flex: 1;
+}
+.lm-date-sep {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 /* ── Fields ── */
@@ -614,6 +668,11 @@ async function remove(loc) {
   overflow: hidden;
 }
 .lm-card-desc--empty { font-style: italic; }
+.lm-card-dates {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
 
 /* ── Empty state ── */
 .lm-loading,

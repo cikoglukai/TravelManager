@@ -5,7 +5,7 @@
     <div class="pv-topbar no-print">
       <NuxtLink :to="`/trips/${tripId}`" class="btn btn-back">← Back to Trip</NuxtLink>
       <div class="pv-topbar-actions">
-        <NuxtLink :to="`/plan/${tripId}`" class="btn btn-outline">✏ Edit Plan</NuxtLink>
+        <NuxtLink v-if="isOwner" :to="`/plan/${tripId}`" class="btn btn-outline">✏ Edit Plan</NuxtLink>
         <button class="btn btn-secondary" @click="printPlan">🖨 Print</button>
       </div>
     </div>
@@ -16,7 +16,7 @@
     <!-- ── No plan yet ── -->
     <div v-else-if="!plan" class="empty-state">
       <p style="margin-bottom:16px">No travel plan created for this trip yet.</p>
-      <NuxtLink :to="`/plan/${tripId}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
+      <NuxtLink v-if="isOwner" :to="`/plan/${tripId}`" class="btn btn-gold">Create Travel Plan</NuxtLink>
     </div>
 
     <!-- ── Plan document ── -->
@@ -198,20 +198,63 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, waitAuthReady } = useAuth()
+const { apiFetch } = useApiFetch()
 const route    = useRoute()
 const tripId   = Number(route.params.tripId)
 
-onMounted(() => { if (!user.value) navigateTo('/register') })
+const tripData = ref(null)
+const planData = ref(null)
+const pending  = ref(true)
 
-// ── Fetch trip + plan in parallel ────────────────────────────────────────────
-const [{ data: tripData }, { data: planData, pending }] = await Promise.all([
-  useFetch(() => `/api/trips/${tripId}`,          { key: `pv-trip-${tripId}` }),
-  useFetch(() => `/api/travel-plans/${tripId}`,   { key: `pv-plan-${tripId}` }),
-])
+onMounted(async () => {
+  await waitAuthReady()
+  if (!user.value) return navigateTo('/register')
+  try {
+    const [t, p] = await Promise.allSettled([
+      apiFetch(`/api/trips/${tripId}`),
+      apiFetch(`/api/travel-plans/${tripId}`),
+    ])
+    if (t.status === 'fulfilled') tripData.value = t.value
+    if (p.status === 'fulfilled') planData.value = p.value
+  } finally {
+    pending.value = false
+  }
+})
 
 const trip = computed(() => tripData.value)
-const plan = computed(() => planData.value?.country ? planData.value : null)
+const plan = computed(() => {
+  const p = planData.value
+  if (!p) return null
+  if (p.mode === 'custom') {
+    // Map custom_* fields onto the template-shaped keys the markup already uses,
+    // so we don't duplicate the document layout for custom plans.
+    return {
+      ...p,
+      emoji:                   '📍',
+      country:                 p.custom_destination || trip.value?.destination || 'Custom trip',
+      city:                    '',
+      destination_description: p.custom_route_description || '',
+      route_name:              p.custom_route_name,
+      route_description:       p.custom_route_description,
+      duration_days:           p.custom_duration_days ?? 0,
+      highlights:              (p.custom_highlights || '')
+                                 .split(',').map(h => h.trim()).filter(Boolean).join(' · '),
+      transport_type:          p.custom_transport_type,
+      provider:                p.custom_transport_provider,
+      transport_duration:      p.custom_transport_duration,
+      price_from:              p.custom_transport_price_from ?? 0,
+      transport_notes:         p.custom_transport_notes,
+      accommodation_type:      p.custom_accommodation_type,
+      accommodation_name:      p.custom_accommodation_name,
+      price_per_night:         p.custom_accommodation_price_per_night ?? 0,
+      rating:                  p.custom_accommodation_rating ?? 0,
+      accommodation_notes:     p.custom_accommodation_notes,
+    }
+  }
+  return p.country ? p : null
+})
+const isOwner = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
 
 // ── Derived data ─────────────────────────────────────────────────────────────
 const highlightsList = computed(() =>
