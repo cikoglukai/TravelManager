@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-{{ .Values.tenantId }}-default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-{{ .Values.tenantId }}-allow-bff
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: infra
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: bff-gateway
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-{{ .Values.tenantId }}-allow-egress
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: [{namespaceSelector: {}}]
+      ports: [{port: 53, protocol: UDP}]
+    # Pub/Sub via PGA, Cloud SQL via PSC, RapidAPI/SendGrid via Cloud NAT
+    - to: [{ipBlock: {cidr: 0.0.0.0/0}}]

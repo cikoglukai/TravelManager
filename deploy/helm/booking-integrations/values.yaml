@@ -1,0 +1,29 @@
+serviceName: booking-integrations
+replicaCount: 2
+
+image:
+  repository: europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-booking-integrations/app
+  tag: latest
+
+envFromSecrets:
+  - booking-integrations-secrets
+
+externalSecrets:
+  - name: booking-integrations-secrets
+    keys:
+      - secretKey: RAPIDAPI_KEY
+        remoteKey: travelmanager-rapidapi-key
+      - secretKey: REDIS_URL
+        remoteKey: travelmanager-redis-url
+
+workloadIdentity:
+  gsaEmail: booking-integrations-svc@REPLACE-PROJECT.iam.gserviceaccount.com
+
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits:   {cpu: 500m, memory: 512Mi}
+
+hpa:           {enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilizationPercentage: 70}
+pdb:           {enabled: true, minAvailable: 1}
+networkPolicy: {enabled: true, allowedFromNamespace: shared-services}
+serviceMonitor: {enabled: true}

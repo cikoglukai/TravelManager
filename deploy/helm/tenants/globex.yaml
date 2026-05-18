@@ -1,0 +1,9 @@
+# Example Enterprise tenant: Globex Inc.
+tenantId: globex
+plan: enterprise
+quotaCpu: "8"
+quotaMemory: 16Gi
+
+trip:        {enabled: true, tenantId: globex, plan: enterprise, replicaCount: 2}
+social:      {enabled: true, tenantId: globex, plan: enterprise, replicaCount: 2}
+destination: {enabled: true, tenantId: globex, plan: enterprise, replicaCount: 2}

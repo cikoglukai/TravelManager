@@ -1,0 +1,31 @@
+serviceName: notification
+replicaCount: 2
+image: {repository: europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-notification/app, tag: latest}
+
+env:
+  GOOGLE_CLOUD_PROJECT: REPLACE-PROJECT
+  SENDGRID_FROM_EMAIL:  noreply@travelmanager.app
+
+envFromSecrets: [notification-secrets]
+externalSecrets:
+  - name: notification-secrets
+    keys:
+      - {secretKey: DATABASE_URL_NOTIFICATION, remoteKey: travelmanager-notification-database-url}
+      - {secretKey: SENDGRID_API_KEY,          remoteKey: travelmanager-sendgrid-api-key}
+
+workloadIdentity: {gsaEmail: notification-svc@REPLACE-PROJECT.iam.gserviceaccount.com}
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits:   {cpu: 500m, memory: 512Mi}
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 70
+  pubsubSubscription: notification.dispatch
+  pubsubMessagesPerPod: 100
+
+pdb:           {enabled: true, minAvailable: 1}
+networkPolicy: {enabled: true, allowedFromNamespace: shared-services}
+serviceMonitor: {enabled: true}

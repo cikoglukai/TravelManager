@@ -1,0 +1,25 @@
+apiVersion: v2
+name: tenant-bundle
+description: Umbrella chart per tenant — installs dedicated trip/social/destination Deployments + namespace policies
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: travelmanager-service
+    version: 0.1.0
+    repository: file://../_template
+  - name: trip
+    version: 0.1.0
+    repository: file://../trip
+    alias: trip
+    condition: trip.enabled
+  - name: social
+    version: 0.1.0
+    repository: file://../social
+    alias: social
+    condition: social.enabled
+  - name: destination
+    version: 0.1.0
+    repository: file://../destination
+    alias: destination
+    condition: destination.enabled

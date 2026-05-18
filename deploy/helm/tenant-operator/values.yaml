@@ -1,0 +1,8 @@
+schedule: "*/10 * * * *"
+projectId: REPLACE-PROJECT
+identityTenantUrl: http://identity-tenant.shared-services.svc.cluster.local
+bundleChartRef: oci://europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-charts/tenant-bundle:0.1.0
+
+serviceAccount:
+  name: tenant-operator-svc
+  gsaEmail: tenant-operator@REPLACE-PROJECT.iam.gserviceaccount.com

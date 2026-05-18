@@ -1,0 +1,32 @@
+serviceName: identity-tenant
+replicaCount: 2
+
+image:
+  repository: europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-identity-tenant/app
+  tag: latest
+
+env:
+  GOOGLE_CLOUD_PROJECT: REPLACE-PROJECT
+
+envFromSecrets:
+  - identity-tenant-secrets
+
+externalSecrets:
+  - name: identity-tenant-secrets
+    keys:
+      - secretKey: DATABASE_URL_IDENTITY
+        remoteKey: travelmanager-identity-database-url
+      - secretKey: SUPERADMIN_UID
+        remoteKey: travelmanager-superadmin-uid
+
+workloadIdentity:
+  gsaEmail: identity-tenant-svc@REPLACE-PROJECT.iam.gserviceaccount.com
+
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits:   {cpu: 500m, memory: 512Mi}
+
+hpa:           {enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70}
+pdb:           {enabled: true, minAvailable: 1}
+networkPolicy: {enabled: true, allowedFromNamespace: shared-services}
+serviceMonitor: {enabled: true}

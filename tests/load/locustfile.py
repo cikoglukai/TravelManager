@@ -23,11 +23,16 @@ sys.path.insert(0, str(ROOT))  # so scenarios can import auth
 
 from scenarios.browsing import BrowsingUser  # noqa: E402,F401
 from scenarios.authenticated import AuthedUser  # noqa: E402,F401
+from scenarios.feed_user import FeedUser  # noqa: E402,F401
+from scenarios.warning_storm import WarningStorm  # noqa: E402,F401
+from scenarios.newsletter_burst import NewsletterBurst  # noqa: E402,F401
 
 _shape = os.environ.get("LOCUST_SHAPE", "").strip().lower()
-if _shape == "periodic":
+if _shape == "sustained":
+    from shapes.sustained import SustainedShape  # noqa: E402,F401
+elif _shape == "periodic":
     from shapes.periodic import PeriodicShape  # noqa: E402,F401
 elif _shape == "spike":
     from shapes.spike import SpikeShape  # noqa: E402,F401
 elif _shape:
-    raise RuntimeError(f"Unknown LOCUST_SHAPE={_shape!r}. Use 'periodic', 'spike', or unset.")
+    raise RuntimeError(f"Unknown LOCUST_SHAPE={_shape!r}. Use 'periodic', 'spike', 'sustained', or unset.")

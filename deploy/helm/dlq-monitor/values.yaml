@@ -1,0 +1,12 @@
+schedule: "*/15 * * * *"
+threshold: 50
+
+image:
+  repository: google/cloud-sdk
+  tag: "alpine"
+
+projectId: REPLACE-PROJECT
+
+serviceAccount:
+  name: dlq-monitor-svc
+  gsaEmail: dlq-monitor@REPLACE-PROJECT.iam.gserviceaccount.com

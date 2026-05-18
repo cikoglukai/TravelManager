@@ -1,0 +1,84 @@
+name: cd-staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'packages/**'
+      - 'deploy/helm/**'
+      - 'terraform/**'
+      - '.github/workflows/cd-staging.yml'
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_STAGING }}
+  REGION:     europe-west1
+  CLUSTER:    travelmanager-staging
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        service: [bff-gateway, identity-tenant, trip, booking-integrations, social, travel-info, destination, notification]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER_STAGING }}
+          service_account:            ${{ vars.GCP_SA_DEPLOY_STAGING }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/travelmanager-${{ matrix.service }}/app:sha-${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/travelmanager-${{ matrix.service }}/app:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to:   type=gha,scope=${{ matrix.service }},mode=max
+
+  helm-deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER_STAGING }}
+          service_account:            ${{ vars.GCP_SA_DEPLOY_STAGING }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location:     ${{ env.REGION }}
+      - run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - name: Helm upgrade each shared-services release
+        run: |
+          for svc in bff-gateway identity-tenant trip booking-integrations social travel-info destination notification; do
+            helm upgrade --install $svc deploy/helm/$svc \
+              -n shared-services --create-namespace \
+              --set image.repository=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/travelmanager-$svc/app \
+              --set image.tag=sha-${{ github.sha }} \
+              --wait --timeout 5m
+          done
+      - name: Smoke test
+        run: |
+          BFF_HOST="https://staging.travelmanager.app"
+          for svc in trip identity-tenant social travel-info destination booking-integrations notification bff-gateway; do
+            curl -fsS "$BFF_HOST/api/health" -H "host: $svc.staging.travelmanager.app" || true
+          done

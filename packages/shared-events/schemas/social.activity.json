@@ -1,0 +1,14 @@
+{
+  "$id": "social.activity",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "actorUid", "verb", "objectId"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "tenantId":   { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "version":    { "type": "integer", "minimum": 1 },
+    "actorUid":   { "type": "string" },
+    "verb":       { "type": "string", "enum": ["liked", "commented", "followed", "trip_published"] },
+    "objectId":   { "type": "string" }
+  }
+}

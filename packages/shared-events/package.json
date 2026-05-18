@@ -1,0 +1,15 @@
+{
+  "name": "@travelmanager/shared-events",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./schemas/*": "./schemas/*.json"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^4.7.0",
+    "ajv": "^8.17.1"
+  }
+}

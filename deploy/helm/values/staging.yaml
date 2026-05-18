@@ -1,0 +1,11 @@
+# Cross-cutting values for staging — referenced from individual `helm upgrade` calls.
+# Per-service overrides live alongside this file: bff-gateway-staging.yaml, trip-staging.yaml, etc.
+
+global:
+  project: travelmanager-staging
+  region:  europe-west1
+  domain:  staging.travelmanager.app
+
+cluster:
+  name: travelmanager-staging
+  namespace: shared-services

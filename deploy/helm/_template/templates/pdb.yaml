@@ -1,0 +1,15 @@
+{{- define "tm.pdb" -}}
+{{- if .Values.pdb.enabled -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "tm.fullname" . }}
+  labels:
+    {{- include "tm.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "tm.selectorLabels" . | nindent 6 }}
+{{- end -}}
+{{- end -}}

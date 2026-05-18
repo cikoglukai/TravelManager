@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.serviceAccount.gsaEmail | quote }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tenant-operator
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "resourcequotas", "limitranges"]
+    verbs: ["get", "list", "create", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "create", "patch", "update", "delete"]
+  - apiGroups: ["helm.sh"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tenant-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tenant-operator
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tenant-operator
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: OnFailure
+          containers:
+            - name: reconciler
+              image: alpine/helm:3.16.0
+              env:
+                - name: IDENTITY_URL
+                  value: {{ .Values.identityTenantUrl | quote }}
+                - name: BUNDLE
+                  value: {{ .Values.bundleChartRef | quote }}
+                - name: PROJECT
+                  value: {{ .Values.projectId | quote }}
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache curl jq >/dev/null
+                  # Fetch all tenants (Std + Ent) from identity-tenant service.
+                  # The endpoint /api/internal/tenants is added by task #20 helper PR.
+                  TENANTS_JSON=$(curl -fsS "$IDENTITY_URL/api/internal/tenants?plan=standard,enterprise")
+                  echo "$TENANTS_JSON" | jq -c '.[]' | while read -r T; do
+                    ID=$(echo "$T" | jq -r '.id')
+                    PLAN=$(echo "$T" | jq -r '.plan')
+                    NS="tenant-$ID"
+                    echo "[reconcile] $ID ($PLAN) -> $NS"
+                    kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+                    helm upgrade --install "tenant-$ID" "$BUNDLE" \
+                      -n "$NS" \
+                      --set tenantId="$ID" \
+                      --set plan="$PLAN" \
+                      --set "trip.tenantId=$ID,trip.plan=$PLAN" \
+                      --set "social.tenantId=$ID,social.plan=$PLAN" \
+                      --set "destination.tenantId=$ID,destination.plan=$PLAN" \
+                      --wait --timeout 5m
+                  done

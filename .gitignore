@@ -64,3 +64,11 @@ terraform_iaas/terraform.tfvars
 terraform_iaas/*.auto.tfvars
 terraform_iaas/*.tfstate
 terraform_iaas/*.tfstate.*
+
+# Catch-all terraform secrets/state anywhere (incl. archive/)
+**/.terraform/
+**/terraform.tfvars
+**/*.auto.tfvars
+**/*.tfstate
+**/*.tfstate.*
+!**/terraform.tfvars.example

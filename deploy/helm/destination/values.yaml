@@ -1,0 +1,20 @@
+serviceName: destination
+replicaCount: 2
+image: {repository: europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-destination/app, tag: latest}
+
+env: {GOOGLE_CLOUD_PROJECT: REPLACE-PROJECT}
+envFromSecrets: [destination-secrets]
+externalSecrets:
+  - name: destination-secrets
+    keys:
+      - {secretKey: DATABASE_URL_DESTINATION, remoteKey: travelmanager-destination-database-url}
+
+workloadIdentity: {gsaEmail: destination-svc@REPLACE-PROJECT.iam.gserviceaccount.com}
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits:   {cpu: 500m, memory: 512Mi}
+
+hpa:           {enabled: true, minReplicas: 2, maxReplicas: 10, targetCPUUtilizationPercentage: 70}
+pdb:           {enabled: true, minAvailable: 1}
+networkPolicy: {enabled: true, allowedFromNamespace: shared-services}
+serviceMonitor: {enabled: true}

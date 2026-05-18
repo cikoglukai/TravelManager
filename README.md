@@ -1,175 +1,98 @@
-# Trip Manager
+# TravelManager
 
-A single-page web application for managing leisure travel trips.
-Built as part of a university exercise at HTWG Konstanz.
+Social travel-management SaaS. Built as part of HTWG Konstanz Cloud Application Development (Milestone 2: Cloud-native).
 
-**Group members:** Kai Cikoglu, Nina Karl, Johanna Prinz, Daniel Rill
-
----
-
-## Application Architecture
-
-### Overview
-
-The application follows a fullstack architecture where the frontend and backend
-are served from the same Nuxt 3 process. The frontend communicates with the
-backend exclusively through a REST API.
-
-```
-┌─────────────────────────────────────────┐
-│              Browser (SPA)              │
-│         Vue 3 · Nuxt 3 (app/)           │
-└────────────────────┬────────────────────┘
-                     │ REST (HTTP/JSON)
-┌────────────────────▼────────────────────┐
-│           Nuxt / Nitro Server           │
-│        REST API  (server/api/)          │
-└────────────────────┬────────────────────┘
-                     │ pg (node-postgres)
-┌────────────────────▼────────────────────┐
-│             PostgreSQL 16               │
-│         (Docker named volume)           │
-└─────────────────────────────────────────┘
-```
-
-### Technology Stack
-
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js 22 |
-| Framework | Nuxt 3 (Vue 3 + Nitro) |
-| Frontend | Vue 3 Composition API, single-file components |
-| Backend / API | Nitro (built into Nuxt) — file-based REST routes |
-| Database | PostgreSQL 16 |
-| DB Client | node-postgres (`pg`) |
-| Containerisation | Docker + Docker Compose |
-| Operating System | macOS / Linux (any Docker-capable OS) |
-
-### Project Structure
-
-```
-app/                    # Frontend (Nuxt srcDir)
-├── app.vue             # Root layout, navigation bar, footer
-├── components/
-│   └── TripForm.vue    # Shared create/edit form component
-├── composables/
-│   └── useAuth.js      # Session state (useState + localStorage)
-├── pages/
-│   ├── index.vue       # Redirect based on auth state
-│   ├── register.vue    # Login / registration (two-step)
-│   └── trips/
-│       ├── index.vue   # Trip list
-│       ├── new.vue     # Create trip
-│       └── [id].vue    # Trip detail + inline edit
-└── plugins/
-    └── auth.client.js  # Restores session from localStorage on load
-
-server/                 # Backend (Nitro — runs on Node.js)
-├── api/
-│   ├── users/
-│   │   └── index.post.js       # POST /api/users  (login / register)
-│   └── trips/
-│       ├── index.get.js        # GET  /api/trips
-│       ├── index.post.js       # POST /api/trips
-│       ├── [id].get.js         # GET  /api/trips/:id
-│       ├── [id].put.js         # PUT  /api/trips/:id
-│       └── [id].delete.js      # DELETE /api/trips/:id
-├── plugins/
-│   └── db.js           # Runs CREATE TABLE IF NOT EXISTS on startup
-└── utils/
-    └── db.js           # PostgreSQL connection pool + schema definition
-
-public/                 # Static assets
-nuxt.config.js          # Nuxt configuration (srcDir, compatibilityDate)
-docker-compose.yml      # PostgreSQL + app services
-Dockerfile              # App container (Node 22 Alpine)
-```
-
-### REST API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/users` | Login (existing email) or register (new email + name) |
-| GET | `/api/trips?userId=` | List all trips for a user |
-| POST | `/api/trips` | Create a new trip |
-| GET | `/api/trips/:id` | Get full trip details |
-| PUT | `/api/trips/:id` | Update a trip |
-| DELETE | `/api/trips/:id` | Delete a trip |
-
-### Database Schema
-
-```sql
-users
-  id         SERIAL PRIMARY KEY
-  name       TEXT NOT NULL
-  email      TEXT NOT NULL UNIQUE
-  created_at TIMESTAMPTZ DEFAULT NOW()
-
-trips
-  id                 SERIAL PRIMARY KEY
-  user_id            INTEGER REFERENCES users(id) ON DELETE CASCADE
-  title              TEXT NOT NULL
-  destination        TEXT NOT NULL
-  start_date         TEXT NOT NULL
-  short_description  TEXT NOT NULL          -- max 80 characters
-  detail_description TEXT NOT NULL DEFAULT ''
-  created_at         TIMESTAMPTZ DEFAULT NOW()
-```
+**Team:** Kai Cikoglu, Nina Karl, Johanna Prinz, Daniel Rill
 
 ---
 
-## Running the Application
+## Architecture
 
-### With Docker (recommended)
+8-service mono-repo, 12-Factor compliant, deployed to GKE Autopilot via Terraform + Helm.
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+```
+                       acme.travelmanager.app
+                                  │
+                       ingress-nginx + cert-manager
+                                  │
+                              bff-gateway   ──── tenant resolve, plan-feature gate
+                          ┌───┬─┴─┬───┬───┬───┐
+                          ▼   ▼   ▼   ▼   ▼   ▼
+                 identity  trip social travel destination booking notification
+                  -tenant            -info               -integrations
+                          └──── Pub/Sub (10+ topics, DLQ + retry policy) ────┘
+                          └──── Cloud SQL · Firestore · Memorystore Redis ───┘
+```
+
+See [`docs/architecture/CLOUD_ARCHITECTURE.md`](docs/architecture/CLOUD_ARCHITECTURE.md) for the full architecture document (C4 views, 12F table, SLA matrix, Pub/Sub topology). LikeC4 diagrams in [`docs/architecture/workspace.dsl`](docs/architecture/workspace.dsl) — auto-published to GitHub Pages.
+
+## Local development
 
 ```bash
 docker compose up --build
 ```
 
-The app is available at **http://localhost:3000**.
-PostgreSQL data is persisted in a Docker named volume (`postgres_data`).
+Brings up postgres + redis + Pub/Sub emulator + all 8 microservices. UI at [http://localhost:8090](http://localhost:8090). Per-service health endpoints:
+
+| Port | Service |
+|---|---|
+| 8090 | bff-gateway (Nuxt SSR — entrypoint) |
+| 8091 | identity-tenant |
+| 8092 | trip |
+| 8093 | booking-integrations |
+| 8094 | social |
+| 8095 | travel-info |
+| 8096 | destination |
+| 8097 | notification |
 
 ```bash
-docker compose down        # stop (data kept)
-docker compose down -v     # stop and delete database
+# Quick smoke check
+for p in 8090 8091 8092 8093 8094 8095 8096 8097; do curl -s http://localhost:$p/api/health; echo; done
 ```
 
-### Local Development
+`SKIP_AUTH=1` is set on every service in compose — Firebase JWT verification is bypassed locally; tenant defaults to `dev` (Enterprise plan) so all plan-gated endpoints work.
 
-Requires Node.js 22+ and a running PostgreSQL instance.
+## Repo layout
 
-```bash
-# 1. Start only the database
-docker compose up postgres -d
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the dev server with hot-reload
-npm run dev
+```
+services/        8 microservices (bff-gateway, identity-tenant, trip, social, travel-info, destination, booking-integrations, notification)
+packages/        shared-auth · shared-events · shared-db · shared-config
+deploy/helm/     per-service charts + tenant-bundle + tenant-operator + dlq-monitor + observability
+terraform/       backend.tf · modules/{gke,pubsub,memorystore,scheduler,artifact-registry,cloudsql-multi,iam} · envs/{staging,prod}
+tests/load/      Locust scenarios + shapes (browsing, authed, feed, warning storm, newsletter burst)
+tests/perf/k6/   Service-level micro-benchmarks
+tests/seed/      Bulk seeders + scale profiles
+docs/architecture/  Cloud architecture doc + LikeC4 workspace
+archive/         Monolith Terraform + IaaS Terraform (historical, not wired)
 ```
 
-The app is available at **http://localhost:3000**.
+## SaaS plans
 
-### Environment Variables
+| Plan | Price | SLA | Customisation |
+|---|---|---|---|
+| Free | — | best-effort | none |
+| Standard | attractive | 99.5 % | white-label (logo, colors, custom domain), newsletter, destination products |
+| Enterprise | premium | 99.9 % | dedicated DB, SSO, B2B insights dashboard, custom workflows |
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/travelmanager` | PostgreSQL connection string |
-| `NITRO_HOST` | — | Set to `0.0.0.0` inside Docker to accept external connections |
-| `NITRO_PORT` | `8080` in Docker | Internal application container port |
+## Features
 
-Copy `.env.example` to `.env` to override defaults locally.
+- **Trip management** — CRUD, locations with date ranges, travel plans
+- **Social** — personalized live feed (Insta-style fan-out-on-write), follow graph, weekly newsletter, likes, comments
+- **Travel information** — automatic ingestion from GDACS · ReliefWeb · OpenWeather; per-trip alerts via Pub/Sub
+- **Destination management** — catalog of cities/routes/transport/accommodation, sellable products, B2B traveller-insights dashboard (k-anonymized)
+- **Multi-tenant SaaS** — Free / Standard / Enterprise plans with namespace-per-tenant isolation
+- **White-labelling** — Standard+ tenants customise branding + custom domain
+- **Async control** — DLQ monitor, replay scripts, admin pause API (Enterprise)
 
----
+## CI/CD
 
-## User Stories Implemented
+- `.github/workflows/ci.yml` — lint + typecheck + unit tests + Docker build on PR
+- `.github/workflows/cd-staging.yml` — push to `main` → build images → Helm deploy to staging GKE
+- `.github/workflows/cd-prod.yml` — tag `v*` → manual approval → production rollout
+- `.github/workflows/terraform.yml` — PR plan + main apply
+- `.github/workflows/loadtest-nightly.yml` — nightly Locust run against staging
+- `.github/workflows/likec4.yml` — auto-publish architecture diagrams to GitHub Pages
 
-- **Register / Login** — identify by email address; no password required
-- **Create Trip** — title, destination, start date, short description (max 80 chars), detailed description
-- **View Trips** — list of all trips for the logged-in user (title + date)
-- **Trip Detail** — full view of all trip fields
-- **Edit Trip** — inline edit form on the detail page
-- **Delete Trip** — with confirmation prompt
+## Documentation history
+
+Phase 7 cutover removed the original Cloud Run monolith. Historical docs (`IMPLEMENTATION.md`, `CloudRun.md`, `DEPLOYMENT_*.md`, `LOCUST_SETUP.md`) describe earlier deployments and are kept for reference; the live architecture is in `docs/architecture/CLOUD_ARCHITECTURE.md`.

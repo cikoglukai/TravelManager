@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-{{ .Values.tenantId }}-quota
+spec:
+  hard:
+    requests.cpu:    {{ .Values.quotaCpu | quote }}
+    requests.memory: {{ .Values.quotaMemory | quote }}
+    limits.cpu:      {{ mul (atoi (printf "%v" .Values.quotaCpu)) 2 | quote }}
+    limits.memory:   {{ .Values.quotaMemory | quote }}
+    pods: "30"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-{{ .Values.tenantId }}-limits
+spec:
+  limits:
+    - type: Container
+      default:        {cpu: 500m, memory: 512Mi}
+      defaultRequest: {cpu: 100m, memory: 256Mi}
+      max:            {cpu: 2,    memory: 2Gi}

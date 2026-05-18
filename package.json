@@ -3,18 +3,15 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "nuxt dev",
-    "build": "nuxt build",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview"
-  },
-  "dependencies": {
-    "globe.gl": "^2.45.3",
-    "firebase": "^12.12.0",
-    "firebase-admin": "^11.11.0",
-    "nuxt": "^3.13.0",
-    "pg": "^8.20.0"
+    "dev":      "npm run dev --workspace=@travelmanager/bff-gateway",
+    "build":    "npm run build --workspaces --if-present",
+    "compose":  "docker compose up --build",
+    "compose:down": "docker compose down"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

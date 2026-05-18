@@ -1,0 +1,22 @@
+kube-prometheus-stack:
+  defaultRules: {create: true}
+  prometheus:
+    prometheusSpec:
+      retention: 14d
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+  grafana:
+    adminPassword: REPLACE  # provide via ExternalSecret in real envs
+    sidecar:
+      dashboards: {enabled: true, label: grafana_dashboard, searchNamespace: ALL}
+      datasources: {enabled: true}
+    grafana.ini:
+      auth.anonymous: {enabled: false}
+  alertmanager: {enabled: true}
+
+customMetrics:
+  enabled: true
+
+customMetricsStackdriverAdapter:
+  workloadIdentity:
+    gcpServiceAccount: custom-metrics-stackdriver-adapter@REPLACE-PROJECT.iam.gserviceaccount.com

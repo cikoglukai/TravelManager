@@ -1,0 +1,17 @@
+{
+  "$id": "trip.created",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "tripId", "userUid", "destination", "startDate", "endDate"],
+  "properties": {
+    "eventId":     { "type": "string", "format": "uuid" },
+    "tenantId":    { "type": "string", "minLength": 1 },
+    "occurredAt":  { "type": "string", "format": "date-time" },
+    "version":     { "type": "integer", "minimum": 1 },
+    "tripId":      { "type": "integer" },
+    "userUid":     { "type": "string", "minLength": 1 },
+    "destination": { "type": "string" },
+    "origin":      { "type": "string" },
+    "startDate":   { "type": "string", "format": "date" },
+    "endDate":     { "type": "string", "format": "date" }
+  }
+}

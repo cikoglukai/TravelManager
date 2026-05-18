@@ -1,0 +1,21 @@
+{
+  "name": "@travelmanager/shared-auth",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.0"
+  },
+  "peerDependencies": {
+    "google-auth-library": "*"
+  },
+  "peerDependenciesMeta": {
+    "google-auth-library": {
+      "optional": true
+    }
+  }
+}

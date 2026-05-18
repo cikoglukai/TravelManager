@@ -1,0 +1,10 @@
+apiVersion: v2
+name: booking-integrations
+description: RapidAPI flights/hotels/buses with Redis cache
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: travelmanager-service
+    version: 0.1.0
+    repository: file://../_template

@@ -1,0 +1,16 @@
+{
+  "title": "TravelManager — service overview",
+  "schemaVersion": 39,
+  "panels": [
+    {"type": "stat",       "title": "Request rate by service",
+      "targets": [{"expr": "sum by (service) (rate(nginx_ingress_controller_requests[1m]))"}]},
+    {"type": "timeseries", "title": "Latency p95 (ms)",
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m]))) * 1000"}]},
+    {"type": "timeseries", "title": "Pub/Sub backlog (undelivered messages)",
+      "targets": [{"expr": "stackdriver_pubsub_subscription_num_undelivered_messages"}]},
+    {"type": "timeseries", "title": "HPA pod counts",
+      "targets": [{"expr": "kube_horizontalpodautoscaler_status_current_replicas"}]},
+    {"type": "table",      "title": "DLQ depth (ALERT > 50)",
+      "targets": [{"expr": "stackdriver_pubsub_subscription_num_undelivered_messages{subscription_id=~\".*dlq.drain\"}"}]}
+  ]
+}

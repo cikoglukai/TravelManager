@@ -1,0 +1,17 @@
+{{- define "tm.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tm.fullname" . }}
+  labels:
+    {{- include "tm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tm.selectorLabels" . | nindent 4 }}
+{{- end -}}

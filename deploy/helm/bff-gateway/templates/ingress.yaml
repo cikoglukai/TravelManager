@@ -1,0 +1,29 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.serviceName }}
+  labels: {{- include "tm.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "*.travelmanager.app"
+        - travelmanager.app
+      secretName: travelmanager-tls
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bff-gateway
+                port: {number: 80}
+    {{- end }}
+{{- end -}}

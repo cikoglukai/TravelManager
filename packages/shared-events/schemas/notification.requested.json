@@ -1,0 +1,16 @@
+{
+  "$id": "notification.requested",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "userUid", "channel", "template", "data"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "tenantId":   { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "version":    { "type": "integer", "minimum": 1 },
+    "userUid":    { "type": "string" },
+    "channel":    { "type": "array", "items": { "type": "string", "enum": ["email", "push", "in_app"] } },
+    "template":   { "type": "string" },
+    "data":       { "type": "object" },
+    "priority":   { "type": "string", "enum": ["low", "normal", "high"], "default": "normal" }
+  }
+}

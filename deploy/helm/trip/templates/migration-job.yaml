@@ -1,0 +1,23 @@
+# Pre-install / pre-upgrade hook: run node-pg-migrate against the trip DB.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trip-migrate-{{ .Release.Revision }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "tm.fullname" . }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["node", "node_modules/node-pg-migrate/bin/node-pg-migrate", "-d", "DATABASE_URL_TRIP", "-m", "db/migrations", "up"]
+          envFrom:
+            - secretRef:
+                name: trip-secrets

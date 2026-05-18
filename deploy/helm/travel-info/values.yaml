@@ -1,0 +1,28 @@
+serviceName: travel-info
+replicaCount: 2
+image: {repository: europe-west1-docker.pkg.dev/REPLACE-PROJECT/travelmanager-travel-info/app, tag: latest}
+
+env: {GOOGLE_CLOUD_PROJECT: REPLACE-PROJECT}
+envFromSecrets: [travel-info-secrets]
+externalSecrets:
+  - name: travel-info-secrets
+    keys:
+      - {secretKey: DATABASE_URL_TRAVEL_INFO, remoteKey: travelmanager-travel-info-database-url}
+      - {secretKey: OPENWEATHER_API_KEY,      remoteKey: travelmanager-openweather-api-key}
+
+workloadIdentity: {gsaEmail: travel-info-svc@REPLACE-PROJECT.iam.gserviceaccount.com}
+resources:
+  requests: {cpu: 200m, memory: 384Mi}
+  limits:   {cpu: 1,    memory: 768Mi}
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 70
+  pubsubSubscription: travel.warning.match
+  pubsubMessagesPerPod: 100
+
+pdb:           {enabled: true, minAvailable: 1}
+networkPolicy: {enabled: true, allowedFromNamespace: shared-services}
+serviceMonitor: {enabled: true}

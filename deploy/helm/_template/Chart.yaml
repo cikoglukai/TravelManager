@@ -1,0 +1,6 @@
+apiVersion: v2
+name: travelmanager-service
+description: Reusable chart for any TravelManager Nitro microservice
+type: library
+version: 0.1.0
+appVersion: "0.1.0"

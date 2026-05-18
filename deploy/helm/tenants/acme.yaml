@@ -1,0 +1,9 @@
+# Example Standard tenant: Acme Corp.
+tenantId: acme
+plan: standard
+quotaCpu: "2"
+quotaMemory: 4Gi
+
+trip:        {enabled: true, tenantId: acme, plan: standard}
+social:      {enabled: true, tenantId: acme, plan: standard}
+destination: {enabled: true, tenantId: acme, plan: standard}

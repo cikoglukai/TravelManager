@@ -1,0 +1,19 @@
+{{- define "tm.serviceMonitor" -}}
+{{- if .Values.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "tm.fullname" . }}
+  labels:
+    {{- include "tm.labels" . | nindent 4 }}
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- include "tm.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end -}}
+{{- end -}}

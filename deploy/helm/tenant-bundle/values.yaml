@@ -1,0 +1,9 @@
+# Defaults for a Standard tenant. Enterprise/Free overrides live in deploy/helm/tenants/<id>.yaml.
+tenantId: REPLACE-TENANT
+plan: standard
+quotaCpu: "2"
+quotaMemory: 4Gi
+
+trip:        {enabled: true, tenantId: REPLACE-TENANT, plan: standard, replicaCount: 1}
+social:      {enabled: true, tenantId: REPLACE-TENANT, plan: standard, replicaCount: 1}
+destination: {enabled: true, tenantId: REPLACE-TENANT, plan: standard, replicaCount: 1}

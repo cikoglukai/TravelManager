@@ -1,0 +1,15 @@
+{{ include "tm.deployment"     . }}
+---
+{{ include "tm.service"        . }}
+---
+{{ include "tm.serviceAccount" . }}
+---
+{{ include "tm.hpa"            . }}
+---
+{{ include "tm.pdb"            . }}
+---
+{{ include "tm.networkPolicy"  . }}
+---
+{{ include "tm.externalSecret" . }}
+---
+{{ include "tm.serviceMonitor" . }}

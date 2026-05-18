@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint . --ext .js,.ts,.vue || echo "lint warnings (non-blocking until ruleset lands)"
+      - run: npx vue-tsc --noEmit || echo "type warnings (non-blocking until full typing)"
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          # Vitest pass — fails if any *.test.js exists and breaks.
+          if find packages services -name '*.test.*' -type f | grep -q .; then
+            npx vitest run
+          else
+            echo "no tests yet"
+          fi
+
+  build-images:
+    needs: [lint-typecheck, unit]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [bff-gateway, identity-tenant, trip, booking-integrations, social, travel-info, destination, notification]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: false
+          tags: ${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to:   type=gha,scope=${{ matrix.service }},mode=max

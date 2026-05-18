@@ -1,0 +1,8 @@
+global:
+  project: travelmanager-prod
+  region:  europe-west1
+  domain:  travelmanager.app
+
+cluster:
+  name: travelmanager-prod
+  namespace: shared-services

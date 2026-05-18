@@ -1,0 +1,13 @@
+{
+  "$id": "trip.deleted",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "tripId", "userUid"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "tenantId":   { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "version":    { "type": "integer", "minimum": 1 },
+    "tripId":     { "type": "integer" },
+    "userUid":    { "type": "string" }
+  }
+}

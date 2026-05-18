@@ -1,0 +1,21 @@
+{
+  "name": "@travelmanager/travel-info",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nitro dev",
+    "build": "nitro build",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@travelmanager/shared-auth": "*",
+    "@travelmanager/shared-config": "*",
+    "@travelmanager/shared-db": "*",
+    "@travelmanager/shared-events": "*",
+    "fast-xml-parser": "^4.5.0",
+    "h3": "^1.13.0",
+    "nitropack": "^2.10.0",
+    "pg": "^8.20.0"
+  }
+}

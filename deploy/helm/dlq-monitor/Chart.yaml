@@ -1,0 +1,6 @@
+apiVersion: v2
+name: dlq-monitor
+description: CronJob that alerts when DLQ subscription depths exceed a threshold
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,28 @@
+{
+  "$id": "travel.weather.snapshot",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "city", "country", "snapshotAt", "forecast"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "tenantId":   { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "version":    { "type": "integer", "minimum": 1 },
+    "city":       { "type": "string" },
+    "country":    { "type": "string", "minLength": 2, "maxLength": 2 },
+    "snapshotAt": { "type": "string", "format": "date-time" },
+    "forecast": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "tempMin", "tempMax", "precipitationMm", "summary"],
+        "properties": {
+          "date":            { "type": "string", "format": "date" },
+          "tempMin":         { "type": "number" },
+          "tempMax":         { "type": "number" },
+          "precipitationMm": { "type": "number" },
+          "summary":         { "type": "string" }
+        }
+      }
+    }
+  }
+}

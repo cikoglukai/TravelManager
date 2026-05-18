@@ -1,0 +1,63 @@
+{{- define "tm.deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tm.fullname" . }}
+  labels:
+    {{- include "tm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount | default 2 }}
+  selector:
+    matchLabels:
+      {{- include "tm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tm.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8080"
+        prometheus.io/path:   "/metrics"
+    spec:
+      serviceAccountName: {{ include "tm.fullname" . }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Values.serviceName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            {{- range .Values.envFromSecrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu:    {{ .Values.resources.requests.cpu    | default "100m" }}
+              memory: {{ .Values.resources.requests.memory | default "256Mi" }}
+            limits:
+              cpu:    {{ .Values.resources.limits.cpu      | default "500m" }}
+              memory: {{ .Values.resources.limits.memory   | default "512Mi" }}
+{{- end -}}

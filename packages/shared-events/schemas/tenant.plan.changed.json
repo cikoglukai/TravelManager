@@ -1,0 +1,13 @@
+{
+  "$id": "tenant.plan.changed",
+  "type": "object",
+  "required": ["eventId", "tenantId", "occurredAt", "version", "oldPlan", "newPlan"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "tenantId":   { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "version":    { "type": "integer", "minimum": 1 },
+    "oldPlan":    { "type": "string", "enum": ["free", "standard", "enterprise"] },
+    "newPlan":    { "type": "string", "enum": ["free", "standard", "enterprise"] }
+  }
+}
