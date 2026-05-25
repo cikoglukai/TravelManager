@@ -1,0 +1,113 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'packages/**'
+      - 'app/**'
+      - 'k8s/**'
+      - 'Dockerfile'
+      - 'Dockerfile.service'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+env:
+  REGION: europe-west1
+  CLUSTER: travelmanager-gke
+
+permissions:
+  contents: read
+  id-token: write   # Workload Identity Federation
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm install
+      - name: Build all services (compile check)
+        run: |
+          for s in api-gateway user-service trip-service destination-service \
+                   social-service travel-info-service notification-service; do
+            npm run build --workspace services/$s
+          done
+
+  images:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - user-service
+          - trip-service
+          - destination-service
+          - social-service
+          - travel-info-service
+          - notification-service
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+      - name: Build & push ${{ matrix.service }}
+        run: |
+          IMG="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/travelmanager/${{ matrix.service }}"
+          docker build -f Dockerfile.service --build-arg SERVICE=${{ matrix.service }} \
+            -t "$IMG:${GITHUB_SHA}" -t "$IMG:latest" .
+          docker push "$IMG:${GITHUB_SHA}"
+          docker push "$IMG:latest"
+
+  frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+      - name: Build & push frontend
+        run: |
+          IMG="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/travelmanager/frontend"
+          docker build -t "$IMG:${GITHUB_SHA}" -t "$IMG:latest" .
+          docker push "$IMG:${GITHUB_SHA}"
+          docker push "$IMG:latest"
+
+  deploy:
+    needs: [images, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+      - uses: azure/setup-helm@v4
+      - name: Get cluster credentials
+        run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "${{ secrets.GCP_PROJECT }}"
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install travelmanager k8s/travelmanager \
+            --set global.imageRegistry=${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/travelmanager \
+            --set global.imageTag=${GITHUB_SHA} \
+            --set global.gcpProject=${{ secrets.GCP_PROJECT }} \
+            --set global.cloudSqlInstance=${{ secrets.CLOUD_SQL_INSTANCE }} \
+            --set serviceAccount.gcpServiceAccount=travelmanager-gke@${{ secrets.GCP_PROJECT }}.iam.gserviceaccount.com \
+            --wait --timeout 10m

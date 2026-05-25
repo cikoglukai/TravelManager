@@ -33,11 +33,14 @@
       <div v-if="menuOpen" class="nav-dropdown" @click="menuOpen = false">
         <NuxtLink to="/trips" class="nav-dropdown-item">My Trips</NuxtLink>
         <NuxtLink to="/community" class="nav-dropdown-item">Community</NuxtLink>
+        <NuxtLink to="/feed" class="nav-dropdown-item">My Feed</NuxtLink>
         <NuxtLink to="/explore" class="nav-dropdown-item nav-dropdown-globe">🌍 Explore</NuxtLink>
         <div class="nav-dropdown-divider"></div>
         <NuxtLink to="/trips/new" class="nav-dropdown-item nav-dropdown-new">+ New Trip</NuxtLink>
       </div>
     </nav>
+
+    <AlertBanner v-if="hydrated && user" />
 
     <NuxtPage />
 

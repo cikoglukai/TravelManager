@@ -64,3 +64,18 @@ terraform_iaas/terraform.tfvars
 terraform_iaas/*.auto.tfvars
 terraform_iaas/*.tfstate
 terraform_iaas/*.tfstate.*
+
+# Generated local Helm secret overlay (real keys from .env)
+k8s/travelmanager/values-local.secret.yaml
+*.secret.yaml
+
+# Old infra snapshots archived this milestone — contain tfstate/tfvars secrets
+archive/terraform-cloudrun/
+archive/terraform_iaas/
+# Terraform state/vars anywhere
+*.tfstate
+*.tfstate.*
+**/terraform.tfvars
+
+# Python venv accidentally committed under tests/load
+tests/load/.venv/

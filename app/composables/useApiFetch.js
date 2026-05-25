@@ -14,7 +14,12 @@ export const useApiFetch = () => {
       } catch { /* no token available */ }
     }
 
-    return $fetch(url, { ...options, headers })
+    // Prefix relative /api calls with the gateway origin when configured.
+    // Empty apiBase = same-origin (ingress / nginx routes /api -> gateway).
+    const base = useRuntimeConfig().public.apiBase
+    const target = base && url.startsWith('/api') ? `${base}${url}` : url
+
+    return $fetch(target, { ...options, headers })
   }
 
   return { apiFetch }

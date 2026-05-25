@@ -1,0 +1,15 @@
+{
+  "name": "@travelmanager/social-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nitro dev --port 3004",
+    "build": "nitro build",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@travelmanager/shared": "*",
+    "nitropack": "^2.10.0"
+  }
+}

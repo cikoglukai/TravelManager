@@ -1,0 +1,55 @@
+# Local-cluster overlay (kind / minikube / Docker Desktop). Use with:
+#   helm upgrade --install travelmanager k8s/travelmanager -f k8s/travelmanager/values-local.yaml
+#
+# Differences vs prod: in-cluster Postgres (no Cloud SQL sidecar), plain Secrets
+# (no External Secrets Operator), nginx ingress (no managed cert / static IP),
+# no Workload Identity, Pub/Sub disabled, gateway in skip-auth mode, and locally
+# built images (IfNotPresent).
+global:
+  imageRegistry: travelmanager          # local images tagged travelmanager/<svc>:local
+  imageTag: local
+  imagePullPolicy: IfNotPresent
+  gcpProject: local
+  cloudSql:
+    enabled: false
+  extraEnv:
+    - { name: PUBSUB_DISABLED, value: "1" }
+    - { name: GATEWAY_SKIP_AUTH, value: "1" }
+
+postgres:
+  enabled: true
+
+externalSecrets:
+  enabled: false
+
+networkPolicy:
+  enabled: false                        # kind's default CNI doesn't enforce them
+
+serviceAccount:
+  gcpServiceAccount: ""                 # no Workload Identity locally
+
+ingress:
+  enabled: true
+  className: nginx
+  managedCert: false
+  host: ""                              # empty = catch-all → plain http://localhost works
+
+# Plain Secret values for each db-backed service → in-cluster Postgres.
+localSecretValues:
+  user-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_user
+  trip-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_trip
+    RAPIDAPI_KEY: ""
+    FIREBASE_SERVICE_ACCOUNT: "{}"
+  destination-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_destination
+  social-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_social
+  travel-info-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_travelinfo
+  notification-service:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/travelmanager_notification
+    SENDGRID_API_KEY: ""
+  api-gateway:
+    FIREBASE_SERVICE_ACCOUNT: "{}"

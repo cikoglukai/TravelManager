@@ -1,0 +1,125 @@
+# TravelManager Helm values. One image per service in Artifact Registry.
+global:
+  imageRegistry: europe-west1-docker.pkg.dev/PROJECT_ID/travelmanager
+  imageTag: latest
+  imagePullPolicy: Always        # local: set IfNotPresent (use loaded images)
+  # Cloud SQL instance connection name for the Auth Proxy sidecar.
+  cloudSqlInstance: PROJECT_ID:europe-west1:travelmanager-postgres
+  gcpProject: PROJECT_ID
+  cloudSql:
+    enabled: true                # local: false -> no sidecar, use in-cluster Postgres
+  extraEnv: []                   # local: [{name: PUBSUB_DISABLED, value:"1"}, ...]
+
+# In-cluster Postgres — LOCAL ONLY (kind/minikube). Prod uses Cloud SQL.
+postgres:
+  enabled: false
+
+# Per-service plain Secret values, used only when externalSecrets.enabled=false
+# (local). Map: service -> { ENV_KEY: value }.
+localSecretValues: {}
+
+# NetworkPolicies enforce that downstream services are reachable only from other
+# TravelManager pods (the gateway), not arbitrary workloads — required because
+# services trust gateway-injected identity headers.
+networkPolicy:
+  enabled: true
+
+# External Secrets Operator pulls these from GCP Secret Manager.
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef: gcp-secret-store
+
+ingress:
+  enabled: true
+  className: gce                 # local: nginx
+  managedCert: true              # local: false
+  host: travelmanager.example.com
+  staticIpName: travelmanager-ip
+  managedCertName: travelmanager-cert
+
+# Synchronous request/response services (Deployment + Service + HPA).
+syncServices:
+  api-gateway:
+    port: 8080
+    replicas: 2
+    db: false
+    healthPath: /healthz
+    hpa: { min: 2, max: 10, cpu: 70 }
+  user-service:
+    port: 8080
+    db: true
+    healthPath: /api/health
+    hpa: { min: 2, max: 8, cpu: 70 }
+  trip-service:
+    port: 8080
+    db: true
+    healthPath: /api/health
+    hpa: { min: 2, max: 10, cpu: 70 }
+  destination-service:
+    port: 8080
+    db: true
+    healthPath: /api/health
+    hpa: { min: 2, max: 6, cpu: 70 }
+  frontend:
+    port: 8080
+    db: false
+    healthPath: /
+    hpa: { min: 2, max: 6, cpu: 70 }
+
+# Async worker services: HTTP listener (control + push) + Pub/Sub subscribers.
+workerServices:
+  social-service:
+    port: 8080
+    db: true
+    replicas: 2
+  travel-info-service:
+    port: 8080
+    db: true
+    replicas: 1
+  notification-service:
+    port: 8080
+    db: true
+    replicas: 2
+
+# Scheduled jobs. They POST to a service's task endpoint.
+cronJobs:
+  poll-warnings:
+    schedule: "0 * * * *"          # hourly
+    target: "http://travel-info-service:8080/api/tasks/poll-warnings"
+  poll-weather:
+    schedule: "0 */6 * * *"        # every 6h (lower priority)
+    target: "http://travel-info-service:8080/api/tasks/poll-weather"
+  newsletter:
+    schedule: "0 8 * * 1"          # Monday 08:00
+    target: "http://social-service:8080/api/tasks/newsletter"
+
+resources:
+  requests: { cpu: 100m, memory: 192Mi }
+  limits:   { cpu: 500m, memory: 512Mi }
+
+# Workload Identity: bind this KSA to a GCP SA that can access Secret Manager,
+# Cloud SQL and Pub/Sub.
+serviceAccount:
+  gcpServiceAccount: travelmanager-gke@PROJECT_ID.iam.gserviceaccount.com
+
+# Per-service env secrets synced from GCP Secret Manager by ESO. Map of
+# k8s-secret-key -> Secret Manager secret id.
+serviceSecrets:
+  user-service:
+    DATABASE_URL: user-database-url
+  trip-service:
+    DATABASE_URL: trip-database-url
+    RAPIDAPI_KEY: rapidapi-key
+    FIREBASE_SERVICE_ACCOUNT: firebase-service-account
+  destination-service:
+    DATABASE_URL: destination-database-url
+  social-service:
+    DATABASE_URL: social-database-url
+  travel-info-service:
+    DATABASE_URL: travel-info-database-url
+  notification-service:
+    DATABASE_URL: notification-database-url
+    SENDGRID_API_KEY: sendgrid-api-key
+  api-gateway:
+    FIREBASE_SERVICE_ACCOUNT: firebase-service-account

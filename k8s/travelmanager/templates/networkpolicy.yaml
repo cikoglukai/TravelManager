@@ -1,0 +1,43 @@
+{{- if .Values.networkPolicy.enabled }}
+# Default-deny ingress for the namespace, then allow only TravelManager pods to
+# reach each other. This enforces the trust model: downstream services accept
+# the gateway-injected x-user-* headers ONLY from in-cluster TravelManager pods,
+# not from arbitrary workloads or other namespaces. The gateway itself is still
+# reachable from the GKE Ingress (ingress controller pods are allowed below).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-travelmanager-internal
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: travelmanager
+  policyTypes: [Ingress]
+  ingress:
+    # Service-to-service and gateway-to-service traffic (our own pods only).
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: travelmanager
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-gateway
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes: [Ingress]
+  ingress:
+    # GKE Ingress / load balancer health checks + traffic reach the gateway only.
+    - {}
+{{- end }}

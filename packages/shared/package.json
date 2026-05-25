@@ -1,0 +1,21 @@
+{
+  "name": "@travelmanager/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./db": "./db.js",
+    "./firebase": "./firebase.js",
+    "./identity": "./identity.js",
+    "./pubsub": "./pubsub.js",
+    "./tiers": "./tiers.js"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^4.7.0",
+    "firebase-admin": "^11.11.0",
+    "h3": "^1.13.0",
+    "pg": "^8.20.0"
+  }
+}

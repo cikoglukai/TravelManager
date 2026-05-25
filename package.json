@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",

@@ -1,0 +1,85 @@
+{{- range $name, $svc := .Values.syncServices }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    {{- include "tm.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      serviceAccountName: travelmanager
+      containers:
+        - name: {{ $name }}
+          image: {{ include "tm.image" (dict "root" $ "name" $name) }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy | default "Always" }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          env:
+            {{- include "tm.commonEnv" $ | nindent 12 }}
+          {{- if hasKey $.Values.serviceSecrets $name }}
+          envFrom:
+            - secretRef:
+                name: {{ $name }}-secrets
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.healthPath | default "/api/health" }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.healthPath | default "/api/health" }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+        {{- if and $svc.db $.Values.global.cloudSql.enabled }}
+        {{- include "tm.cloudSqlSidecar" $ | nindent 8 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+{{- if $svc.hpa }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}
+  minReplicas: {{ $svc.hpa.min }}
+  maxReplicas: {{ $svc.hpa.max }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.hpa.cpu }}
+{{- end }}
+{{- end }}

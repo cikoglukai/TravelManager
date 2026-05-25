@@ -137,3 +137,35 @@ To bypass Firebase entirely against the local target, start Nuxt with `SKIP_AUTH
 python seed_users.py --cleanup
 # Manually prune trips created during run from Postgres / Firestore likes if needed
 ```
+
+## Async-workload scalability tests (microservices)
+
+These exercise the asynchronous pipeline (TripCreated → Social feed builder →
+Travel Info diff engine) rather than just synchronous CRUD. They target the API
+Gateway in skip-auth mode (`GATEWAY_SKIP_AUTH=1`) using an `x-debug-uid` header,
+so Firebase rate limits don't cap throughput.
+
+1. Bring the stack up locally:
+   ```
+   docker compose -f ../../docker-compose.dev.yml up --build
+   ```
+2. Seed deterministic warnings so the diff engine has data to match:
+   ```
+   curl -X POST localhost:8080/api/tasks/seed-warnings \
+        --data @fixtures/warnings.json    # (hit travel-info directly, port-forward in GKE)
+   ```
+3. Bulk-seed trips (test dataset) to build a backlog:
+   ```
+   python seed_bulk_trips.py --host http://localhost:8080 --users 500 --trips 5000
+   ```
+4. Run the async flood + capture a report:
+   ```
+   locust -f async_flood.py --host http://localhost:8080 \
+          --users 200 --spawn-rate 20 -t 5m --headless \
+          --html reports/async_flood.html
+   ```
+
+Observe worker scaling under load with `kubectl get hpa` (GKE) and the per-worker
+control endpoints: `GET /api/control` on social-service and travel-info-service
+report processed counts, last-run and lag; pause/resume via
+`POST /api/control/:worker/pause|resume`.

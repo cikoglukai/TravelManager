@@ -17,7 +17,7 @@ workspace "TravelManager" "Cloud Application Development – HTWG Konstanz | Mil
         travelManager = softwareSystem "TravelManager" "Microservice SaaS platform. Plans: Free / Standard / Enterprise. Follows 12-Factor principles. Deployed on GKE via Terraform." {
 
             # ── API Gateway ──────────────────────────────────────────────────
-            apiGateway = container "API Gateway" "Single entry point for all clients. Validates Firebase JWT, enforces SaaS plan rate limits, routes to downstream services." "Kong / Cloud Endpoints" "Server"
+            apiGateway = container "API Gateway" "Single entry point for all clients. Validates Firebase JWT, resolves tenant + plan, enforces SaaS plan rate limits and feature gating, injects trusted identity headers, routes to downstream services." "Node.js / Nitro" "Server"
 
             # ── Frontend SPA ─────────────────────────────────────────────────
             spaFrontend = container "Frontend SPA" "Nuxt 3 single-page application. All API traffic routed through the API Gateway." "Nuxt 3 / Vue 3" "Web Browser" {
@@ -93,7 +93,7 @@ workspace "TravelManager" "Cloud Application Development – HTWG Konstanz | Mil
             gkeCluster   = container "GKE Cluster"        "Kubernetes cluster. All services deployed as Deployments with HPA. CronJobs for scheduled workers. Provisioned via Terraform." "Google Kubernetes Engine" "Server"
             artifactReg  = container "Artifact Registry"  "Stores Docker images for all services. Referenced by GKE workloads." "GCP Service"
             secretMgr    = container "Secret Manager"     "Stores DB connection strings, Firebase config and API keys per service. Mounted as K8s Secrets via ESO." "GCP Service"
-            cloudSQLProxy = container "Cloud SQL"         "Managed PostgreSQL 16 – one instance per service database. Connected via Cloud SQL Auth Proxy sidecar." "GCP / PostgreSQL 16" "Database"
+            cloudSQLProxy = container "Cloud SQL"         "Managed PostgreSQL 16 – single instance hosting one logical database per service (documented cost trade-off). Connected via Cloud SQL Auth Proxy sidecar." "GCP / PostgreSQL 16" "Database"
         }
 
         # ─── Relationships ─────────────────────────────────────────────────────

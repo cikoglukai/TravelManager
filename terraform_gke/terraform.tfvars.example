@@ -1,0 +1,8 @@
+project_id  = "your-gcp-project"
+region      = "europe-west1"
+db_password = "change-me-strong"
+
+# Optional secrets (can be left empty and filled later in Secret Manager):
+rapidapi_key             = ""
+sendgrid_api_key         = ""
+firebase_service_account = "{}"

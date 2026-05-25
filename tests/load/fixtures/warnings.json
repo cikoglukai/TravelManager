@@ -1,0 +1,7 @@
+[
+  { "country_code": "FRA", "country_name": "Paris", "severity": "partial", "title": "Demonstrations in central Paris — avoid large gatherings." },
+  { "country_code": "GRC", "country_name": "Athens", "severity": "partial", "title": "Wildfire risk in the Attica region during summer." },
+  { "country_code": "ITA", "country_name": "Rome", "severity": "warning", "title": "Transport strike — expect significant disruption." },
+  { "country_code": "ESP", "country_name": "Madrid", "severity": "partial", "title": "Heatwave advisory." },
+  { "country_code": "CZE", "country_name": "Prague", "severity": "warning", "title": "Flooding along the Vltava river." }
+]

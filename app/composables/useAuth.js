@@ -13,8 +13,11 @@ export const useAuth = () => {
   const user = useState('user', () => null)
   const authReady = useState('authReady', () => false)
 
+  // Firebase is optional (disabled on local clusters with no apiKey).
+  const firebaseEnabled = () => Boolean(useRuntimeConfig().public.firebase?.apiKey)
+
   const _getToken = async () => {
-    if (!import.meta.client) return null
+    if (!import.meta.client || !firebaseEnabled()) return null
     const auth = getAuth()
     if (!auth.currentUser) return null
     return auth.currentUser.getIdToken()
@@ -92,6 +95,7 @@ export const useAuth = () => {
 
   const initAuth = () => {
     if (!import.meta.client) return
+    if (!firebaseEnabled()) { authReady.value = true; return }
     const auth = getAuth()
     onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
@@ -105,8 +109,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     if (!import.meta.client) return
-    const auth = getAuth()
-    await signOut(auth)
+    if (firebaseEnabled()) await signOut(getAuth())
     user.value = null
   }
 

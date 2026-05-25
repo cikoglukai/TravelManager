@@ -1,12 +1,15 @@
 export default defineNuxtConfig({
   srcDir: 'app/',
-  serverDir: 'server/',
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
 
+  // Pure frontend now: the monolith server/ moved to archive/monolith-server.
+  // All /api traffic is routed to the API Gateway by the ingress (prod) or nginx
+  // (local). apiBase lets the SPA target a different gateway origin if needed.
   runtimeConfig: {
-    rapidApiKey: process.env.RAPIDAPI_KEY ?? '',
     public: {
+      apiBase:       process.env.NUXT_PUBLIC_API_BASE ?? '',
+      googleMapsKey: process.env.NUXT_PUBLIC_GOOGLE_MAPS_KEY ?? '',
       firebase: {
         apiKey:            process.env.NUXT_PUBLIC_FIREBASE_API_KEY          ?? '',
         authDomain:        process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN      ?? '',

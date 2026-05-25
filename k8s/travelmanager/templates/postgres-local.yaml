@@ -1,0 +1,78 @@
+{{- if .Values.postgres.enabled }}
+# In-cluster Postgres for LOCAL clusters (kind/minikube) only. Not for prod —
+# prod uses Cloud SQL via the Auth Proxy sidecar. Ephemeral (emptyDir): data is
+# lost on pod restart, which is fine for local dev/demo. One instance, the init
+# ConfigMap creates one database per service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+data:
+  init.sql: |
+    CREATE DATABASE travelmanager_user;
+    CREATE DATABASE travelmanager_trip;
+    CREATE DATABASE travelmanager_destination;
+    CREATE DATABASE travelmanager_social;
+    CREATE DATABASE travelmanager_travelinfo;
+    CREATE DATABASE travelmanager_notification;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+    {{- include "tm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        app.kubernetes.io/part-of: travelmanager
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POSTGRES_DB
+              value: postgres
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

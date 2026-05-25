@@ -1,0 +1,60 @@
+{{- range $name, $svc := .Values.workerServices }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    tier: async-worker
+    {{- include "tm.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        tier: async-worker
+    spec:
+      serviceAccountName: travelmanager
+      containers:
+        - name: {{ $name }}
+          image: {{ include "tm.image" (dict "root" $ "name" $name) }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy | default "Always" }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          env:
+            {{- include "tm.commonEnv" $ | nindent 12 }}
+          {{- if hasKey $.Values.serviceSecrets $name }}
+          envFrom:
+            - secretRef:
+                name: {{ $name }}-secrets
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ $svc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+        {{- if and $svc.db $.Values.global.cloudSql.enabled }}
+        {{- include "tm.cloudSqlSidecar" $ | nindent 8 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+{{- end }}
