@@ -1,175 +1,114 @@
-# Trip Manager
+# TravelManager
 
-A single-page web application for managing leisure travel trips.
-Built as part of a university exercise at HTWG Konstanz.
+**A social travel-planning platform, offered as a B2B SaaS product.**
+Built for the Cloud Application Development course at HTWG Konstanz (Summer Term 2026).
 
-**Group members:** Kai Cikoglu, Nina Karl, Johanna Prinz, Daniel Rill
+**Team:** Kai Cikoglu · Nina Karl · Johanna Prinz · Daniel Rill
 
 ---
 
-## Application Architecture
+## What it does (in plain words)
 
-### Overview
+TravelManager helps travellers plan trips, share them, and stay safe while travelling.
+It is sold to businesses (B2B) on three plans — **Free**, **Standard**, and **Enterprise** —
+each unlocking more features.
 
-The application follows a fullstack architecture where the frontend and backend
-are served from the same Nuxt 3 process. The frontend communicates with the
-backend exclusively through a REST API.
+It has four main areas:
 
-```
-┌─────────────────────────────────────────┐
-│              Browser (SPA)              │
-│         Vue 3 · Nuxt 3 (app/)           │
-└────────────────────┬────────────────────┘
-                     │ REST (HTTP/JSON)
-┌────────────────────▼────────────────────┐
-│           Nuxt / Nitro Server           │
-│        REST API  (server/api/)          │
-└────────────────────┬────────────────────┘
-                     │ pg (node-postgres)
-┌────────────────────▼────────────────────┐
-│             PostgreSQL 16               │
-│         (Docker named volume)           │
-└─────────────────────────────────────────┘
-```
-
-### Technology Stack
-
-| Layer | Technology |
+| Area | What it does for the user |
 |---|---|
-| Runtime | Node.js 22 |
-| Framework | Nuxt 3 (Vue 3 + Nitro) |
-| Frontend | Vue 3 Composition API, single-file components |
-| Backend / API | Nitro (built into Nuxt) — file-based REST routes |
-| Database | PostgreSQL 16 |
-| DB Client | node-postgres (`pg`) |
-| Containerisation | Docker + Docker Compose |
-| Operating System | macOS / Linux (any Docker-capable OS) |
+| **Trip Management** | Plan trips with multiple stops and dates, save travel plans, write reviews, like trips, and search live flights / hotels / buses. |
+| **Social** | A personalized **live feed** of trips from people you follow, plus a weekly **email newsletter**. |
+| **Travel Information** | Automatically checks official **travel warnings** (e.g. natural disasters, unrest) and **weather** against your booked trips, and **warns you** if something affects your plans. |
+| **Destination Management** | Lets travel destinations (hotels, regions) buy anonymized traveller data for marketing — an Enterprise feature. |
 
-### Project Structure
+### The three plans
 
-```
-app/                    # Frontend (Nuxt srcDir)
-├── app.vue             # Root layout, navigation bar, footer
-├── components/
-│   └── TripForm.vue    # Shared create/edit form component
-├── composables/
-│   └── useAuth.js      # Session state (useState + localStorage)
-├── pages/
-│   ├── index.vue       # Redirect based on auth state
-│   ├── register.vue    # Login / registration (two-step)
-│   └── trips/
-│       ├── index.vue   # Trip list
-│       ├── new.vue     # Create trip
-│       └── [id].vue    # Trip detail + inline edit
-└── plugins/
-    └── auth.client.js  # Restores session from localStorage on load
-
-server/                 # Backend (Nitro — runs on Node.js)
-├── api/
-│   ├── users/
-│   │   └── index.post.js       # POST /api/users  (login / register)
-│   └── trips/
-│       ├── index.get.js        # GET  /api/trips
-│       ├── index.post.js       # POST /api/trips
-│       ├── [id].get.js         # GET  /api/trips/:id
-│       ├── [id].put.js         # PUT  /api/trips/:id
-│       └── [id].delete.js      # DELETE /api/trips/:id
-├── plugins/
-│   └── db.js           # Runs CREATE TABLE IF NOT EXISTS on startup
-└── utils/
-    └── db.js           # PostgreSQL connection pool + schema definition
-
-public/                 # Static assets
-nuxt.config.js          # Nuxt configuration (srcDir, compatibilityDate)
-docker-compose.yml      # PostgreSQL + app services
-Dockerfile              # App container (Node 22 Alpine)
-```
-
-### REST API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/users` | Login (existing email) or register (new email + name) |
-| GET | `/api/trips?userId=` | List all trips for a user |
-| POST | `/api/trips` | Create a new trip |
-| GET | `/api/trips/:id` | Get full trip details |
-| PUT | `/api/trips/:id` | Update a trip |
-| DELETE | `/api/trips/:id` | Delete a trip |
-
-### Database Schema
-
-```sql
-users
-  id         SERIAL PRIMARY KEY
-  name       TEXT NOT NULL
-  email      TEXT NOT NULL UNIQUE
-  created_at TIMESTAMPTZ DEFAULT NOW()
-
-trips
-  id                 SERIAL PRIMARY KEY
-  user_id            INTEGER REFERENCES users(id) ON DELETE CASCADE
-  title              TEXT NOT NULL
-  destination        TEXT NOT NULL
-  start_date         TEXT NOT NULL
-  short_description  TEXT NOT NULL          -- max 80 characters
-  detail_description TEXT NOT NULL DEFAULT ''
-  created_at         TIMESTAMPTZ DEFAULT NOW()
-```
+| Plan | Price | Service level | Extra features |
+|---|---|---|---|
+| **Free** | free | best effort | core trip planning |
+| **Standard** | paid | guaranteed (SLA) | personalized feed + newsletter, white-labelling (own logo/colours) |
+| **Enterprise** | premium | guaranteed (SLA) | everything + B2B destination data access |
 
 ---
 
-## Running the Application
+## How it is built (the short version)
 
-### With Docker (recommended)
+Instead of one big program, the system is split into **small independent services**
+("microservices"), each owning one job and its own database. Users never talk to them
+directly — every request goes through a single front door (the **API Gateway**), which
+checks who you are, which plan you have, and routes the request.
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Some work is too slow to do while the user waits (building feeds, scanning travel
+warnings for thousands of trips, sending emails). That work runs **in the background**:
+a service publishes an event, and a separate **worker** picks it up later. This keeps the
+app fast and lets the heavy work scale on its own.
 
-```bash
-docker compose up --build
+```
+   Traveller / Business
+          │
+          ▼
+   ┌──────────────┐   checks login, plan, rate limits
+   │ API Gateway  │   then forwards to the right service
+   └──────┬───────┘
+          │
+   ┌──────┼─────────┬──────────────┬───────────────┬────────────────┐
+   ▼      ▼         ▼              ▼               ▼                ▼
+  user   trip   destination     social        travel-info     notification
+ service service  service       service         service          service
+                              (background)    (background)      (background)
+          │                        ▲                │                ▲
+          └─── events (Pub/Sub) ───┴────────────────┴────────────────┘
+                e.g. "new trip", "travel alert", "newsletter ready"
 ```
 
-The app is available at **http://localhost:3000**.
-PostgreSQL data is persisted in a Docker named volume (`postgres_data`).
+Each service has its own database. Background services can be **paused, resumed, and
+monitored** through a `/api/control` endpoint.
 
-```bash
-docker compose down        # stop (data kept)
-docker compose down -v     # stop and delete database
-```
-
-### Local Development
-
-Requires Node.js 22+ and a running PostgreSQL instance.
-
-```bash
-# 1. Start only the database
-docker compose up postgres -d
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the dev server with hot-reload
-npm run dev
-```
-
-The app is available at **http://localhost:3000**.
-
-### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/travelmanager` | PostgreSQL connection string |
-| `NITRO_HOST` | — | Set to `0.0.0.0` inside Docker to accept external connections |
-| `NITRO_PORT` | `8080` in Docker | Internal application container port |
-
-Copy `.env.example` to `.env` to override defaults locally.
+**Main technologies:** Node.js + Nuxt 3 (web app), PostgreSQL (data), Firebase (login),
+Google Cloud Pub/Sub (background events), Kubernetes on Google Cloud (GKE), Terraform +
+Helm (infrastructure as code), GitHub Actions (automated deployment), Locust (load tests).
 
 ---
 
-## User Stories Implemented
+## Documentation
 
-- **Register / Login** — identify by email address; no password required
-- **Create Trip** — title, destination, start date, short description (max 80 chars), detailed description
-- **View Trips** — list of all trips for the logged-in user (title + date)
-- **Trip Detail** — full view of all trip fields
-- **Edit Trip** — inline edit form on the detail page
-- **Delete Trip** — with confirmation prompt
+| Document | What's in it |
+|---|---|
+| [`docs/SOFTWARE_ARCHITECTURE.md`](docs/SOFTWARE_ARCHITECTURE.md) | The Cloud Project Software Architecture Document — design, services, 12-Factor mapping, infrastructure. |
+| [`docs/MILESTONE2_SUBMISSION.md`](docs/MILESTONE2_SUBMISSION.md) | The single Milestone-2 deliverable: every requirement mapped to where it's implemented, plus the manual Google Cloud setup. |
+| [`docs/MILESTONE2_CHANGELOG.md`](docs/MILESTONE2_CHANGELOG.md) | What changed from Milestone 1 (monolith) to Milestone 2 (microservices). |
+| [`docs/architecture/`](docs/architecture/) | The detailed C4 architecture diagrams (LikeC4), auto-published to GitHub Pages. |
+| [`tests/load/reports/REPORT.md`](tests/load/reports/REPORT.md) | The performance / load-test report with results. |
+
+---
+
+## Running it locally
+
+You only need [Docker](https://www.docker.com/products/docker-desktop/). No cloud
+account or API keys required for the local run.
+
+```bash
+# Start the whole system (all services) locally
+docker compose -f docker-compose.dev.yml up --build
+
+# Try it
+curl localhost:8080/api/destinations
+```
+
+Open **http://localhost:8080** in a browser.
+
+### Optional: run on a real (local) Kubernetes cluster
+
+```bash
+brew install kind helm
+./scripts/kind-up.sh        # builds the images and installs everything on a local cluster
+# open http://localhost
+kubectl get pods,svc,hpa,cronjob
+```
+
+### Deploying to Google Cloud
+
+Fully automated through Terraform + Helm + GitHub Actions. Step-by-step setup
+(including the one-time Google Cloud Console configuration) is in
+[`docs/MILESTONE2_SUBMISSION.md` §9](docs/MILESTONE2_SUBMISSION.md).

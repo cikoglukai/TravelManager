@@ -6,6 +6,28 @@
 
 ---
 
+## 0. Plain-language summary
+
+*(For readers who want the gist before the technical detail.)*
+
+TravelManager is a travel-planning app sold to businesses on three plans (Free,
+Standard, Enterprise). It does four things: plan trips, share them in a social feed,
+warn travellers about danger/weather affecting their trips, and sell anonymized
+traveller data to destinations.
+
+Instead of one large program, it is built as several **small independent services**,
+each doing one job and owning its own database. All user traffic enters through one
+**front door** (the API Gateway) that checks the login and plan. Slow work — building
+feeds, scanning travel warnings, sending email — runs **in the background** so the app
+stays fast, and those background workers can be paused, resumed, and monitored. The
+whole system runs on Google Cloud Kubernetes, and every piece of infrastructure is
+created automatically from code (Terraform + Helm + GitHub Actions).
+
+A glossary of the technical terms (Pub/Sub, HPA, 12-Factor, ESO, …) is at the end of
+this document (§8).
+
+---
+
 ## 1. Context & Functional Scope
 
 TravelManager is a social travel-management application offered as a **B2B SaaS**
@@ -138,8 +160,9 @@ Admin, gateway-identity middleware, Pub/Sub helpers, and plan/tier definitions.
 - **Terraform** (`terraform_gke/`) provisions the GKE cluster, Cloud SQL +
   per-service databases + DATABASE_URL secrets, Pub/Sub topics/subscriptions +
   DLQs, Artifact Registry, the runtime GCP service account + IAM, and the
-  ingress IP. (The earlier Cloud Run / GCE stacks remain under `archive/` as a
-  comparison baseline used in the performance report.)
+  ingress IP. (The earlier Cloud Run stack (`terraform/`) and GCE/IaaS stack
+  (`terraform_iaas/`) remain as the deployment-model comparison baseline used in
+  the performance report.)
 - **CI/CD** (`.github/workflows/deploy.yml`): on push to `main` → build all
   services → push per-service images to Artifact Registry → `helm upgrade` to
   GKE, authenticated via Workload Identity Federation.
@@ -176,3 +199,29 @@ helm upgrade --install travelmanager k8s/travelmanager --set global.gcpProject=$
 ```
 
 See `docs/architecture/` (LikeC4) for the rendered C4 diagrams.
+
+---
+
+## 8. Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Microservice** | One small program that does a single job and owns its own data, instead of one big program doing everything. |
+| **API Gateway** | The single front door all user requests pass through; checks login + plan, then forwards. |
+| **Pub/Sub** | Google Cloud's message system: a service "publishes" an event; other services "subscribe" and react later (background work). |
+| **Event / async workload** | Work done later in the background (after publishing an event) instead of while the user waits. |
+| **Worker** | A background service that consumes events and does the slow work (feed build, warning scan, email). |
+| **Dead-letter topic (DLQ)** | A holding area for messages that keep failing, so they don't retry forever. |
+| **Kubernetes / GKE** | The system that runs and supervises all the service containers; GKE is Google's managed Kubernetes. |
+| **Helm** | A templating tool that describes what to run on Kubernetes as reusable config (a "chart"). |
+| **HPA (Horizontal Pod Autoscaler)** | Automatically adds/removes copies of a service based on load. |
+| **CronJob** | A scheduled task (e.g. "poll travel warnings every hour"). |
+| **Ingress** | The Kubernetes entry point from the internet, with HTTPS/TLS. |
+| **Terraform / IaC** | "Infrastructure as Code" — cloud resources (databases, network, cluster) created from text files instead of by hand. |
+| **CI/CD** | Automated pipeline that builds and deploys the app on every push (here: GitHub Actions). |
+| **12-Factor** | A checklist of best practices for cloud apps (config in env vars, stateless processes, etc.); mapped in §4. |
+| **ESO (External Secrets Operator)** | Pulls passwords/keys from Google Secret Manager into the cluster securely. |
+| **Workload Identity** | Lets services prove their identity to Google Cloud without storing secret key files. |
+| **Firestore** | Google's NoSQL database, used here for review comments and likes. |
+| **SLA** | Service Level Agreement — a guaranteed level of availability/support (Standard & Enterprise plans). |
+| **White-labelling** | Letting a customer rebrand the app with their own logo, colours, and domain. |

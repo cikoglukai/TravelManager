@@ -56,7 +56,7 @@ Helm + Terraform. Shared code in `packages/shared`.
   `plugins/`). Reused the existing Nitro handler style verbatim.
 - Added one parameterized `Dockerfile.service` (build-arg `SERVICE=<name>`) for
   all services; the root `Dockerfile` stays for the frontend.
-- Moved the old monolith API to `archive/monolith-server/` (was `server/`).
+- Removed the old monolith API (was `server/`); its git history is the reference.
 
 ### Services created
 | Service | What moved/was built |
@@ -133,8 +133,9 @@ Helm + Terraform. Shared code in `packages/shared`.
   NetworkPolicies.
 - **Terraform** `terraform_gke/`: GKE Autopilot cluster, Cloud SQL + per-service
   DBs + DATABASE_URL secrets, Pub/Sub topics/subs + DLQs + service-agent IAM,
-  Artifact Registry, runtime SA + IAM, ingress static IP. (Old Cloud Run / GCE
-  stacks kept under `archive/` as the perf-comparison baseline.)
+  Artifact Registry, runtime SA + IAM, ingress static IP. (Earlier Cloud Run
+  stack `terraform/` and GCE/IaaS stack `terraform_iaas/` kept as the
+  perf-comparison baseline.)
 - **CI/CD** `.github/workflows/deploy.yml`: build all → push per-service images
   to Artifact Registry → `helm upgrade` to GKE via Workload Identity Federation.
 

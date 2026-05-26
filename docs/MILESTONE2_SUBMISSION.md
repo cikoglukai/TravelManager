@@ -36,8 +36,10 @@ but none of it was built.
 
 **M2:** we turned that blueprint into the running system — 7 microservices + the Nuxt
 frontend, a Pub/Sub async backbone, one Postgres database per service, on GKE
-Autopilot via Helm + Terraform, with a CI/CD pipeline. The old monolith moved to
-`archive/monolith-server/`.
+Autopilot via Helm + Terraform, with a CI/CD pipeline. The old M1 monolith has
+been removed; its git history remains the reference. The earlier single-VM (IaaS,
+`terraform_iaas/`) and Cloud Run (PaaS, `terraform/`) stacks are kept as the
+performance-comparison baseline.
 
 ---
 
