@@ -3,7 +3,7 @@
     <div class="page-header">
       <h2>Community Trips</h2>
       <div class="page-header-right">
-        <div class="search-bar">
+        <div v-show="sortMode === 'newest'" class="search-bar">
           <span class="search-icon">🔍</span>
           <input
             v-model="searchQuery"
@@ -17,29 +17,44 @@
       </div>
     </div>
 
+    <SocialTabs />
+
+    <!-- Sort: chronological vs personalised "For You" -->
+    <div class="sort-toggle">
+      <button class="sort-btn" :class="{ active: sortMode === 'newest' }" @click="sortMode = 'newest'">Newest</button>
+      <button class="sort-btn" :class="{ active: sortMode === 'foryou' }" @click="sortMode = 'foryou'">✨ For You</button>
+    </div>
+
     <div v-if="loading" class="loading-state">
       <span class="loading-spinner">✈</span>
       <p>Loading trips…</p>
     </div>
 
     <div v-else-if="trips.length" class="trip-grid">
-      <NuxtLink
+      <div
         v-for="trip in trips"
         :key="trip.id"
-        :to="`/trips/${trip.id}`"
         class="trip-card"
       >
-        <div class="trip-card-meta">
-          <span class="trip-card-destination">{{ trip.destination }}</span>
-          <span class="trip-card-date">{{ formatDate(trip.start_date) }}</span>
+        <NuxtLink :to="`/trips/${trip.id}`" class="trip-card-body">
+          <div class="trip-card-meta">
+            <span class="trip-card-destination">{{ trip.destination }}</span>
+            <span class="trip-card-date">{{ formatDate(trip.start_date) }}</span>
+          </div>
+          <h3 class="trip-card-title">{{ trip.title }}</h3>
+          <p class="trip-card-desc">{{ trip.short_description }}</p>
+          <span v-if="trip.reason" class="reason-badge" :class="`reason-${trip.reason}`">
+            {{ reasonLabel(trip.reason) }}
+          </span>
+        </NuxtLink>
+        <div class="trip-card-footer">
+          <NuxtLink :to="`/users/${trip.user_uid}`" class="trip-card-author">
+            <span class="author-avatar">{{ trip.author_name.charAt(0).toUpperCase() }}</span>
+            {{ trip.author_name }}
+          </NuxtLink>
+          <FollowButton :uid="trip.user_uid" />
         </div>
-        <h3 class="trip-card-title">{{ trip.title }}</h3>
-        <p class="trip-card-desc">{{ trip.short_description }}</p>
-        <div class="trip-card-author">
-          <span class="author-avatar">{{ trip.author_name.charAt(0).toUpperCase() }}</span>
-          {{ trip.author_name }}
-        </div>
-      </NuxtLink>
+      </div>
     </div>
 
     <div v-else class="loading-state">
@@ -53,6 +68,7 @@
 <script setup>
 const { user } = useAuth()
 const { apiFetch } = useApiFetch()
+const { loadFollows } = useFollows()
 
 const searchQuery     = ref('')
 const debouncedSearch = ref('')
@@ -67,13 +83,19 @@ function onSearchInput() {
 
 const tripsData = ref([])
 const loading   = ref(false)
+const sortMode  = ref('newest')   // 'newest' | 'foryou'
 
 async function fetchTrips() {
   loading.value = true
   try {
-    const url = debouncedSearch.value
-      ? `/api/trips/all?q=${encodeURIComponent(debouncedSearch.value)}`
-      : '/api/trips/all'
+    let url
+    if (sortMode.value === 'foryou') {
+      url = '/api/trips/recommended'           // personalised, ignores search
+    } else {
+      url = debouncedSearch.value
+        ? `/api/trips/all?q=${encodeURIComponent(debouncedSearch.value)}`
+        : '/api/trips/all'
+    }
     tripsData.value = await apiFetch(url)
   } catch {
     tripsData.value = []
@@ -82,8 +104,9 @@ async function fetchTrips() {
   }
 }
 
-onMounted(fetchTrips)
+onMounted(() => { fetchTrips(); loadFollows() })
 watch(debouncedSearch, fetchTrips)
+watch(sortMode, fetchTrips)
 
 const trips = computed(() => tripsData.value)
 
@@ -92,6 +115,13 @@ function formatDate(d) {
     year: 'numeric', month: 'long', day: 'numeric',
   })
 }
+
+const REASON_LABELS = {
+  interest: '✨ In a country you love',
+  popular: '🔥 Popular',
+  new: '🆕 Fresh',
+}
+function reasonLabel(r) { return REASON_LABELS[r] || '' }
 </script>
 
 <style scoped>
@@ -101,6 +131,43 @@ function formatDate(d) {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+/* Sort toggle */
+.sort-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--white);
+  border: 1px solid var(--sand-dark);
+  border-radius: 100px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.sort-btn {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sort-btn.active { background: var(--navy); color: var(--white); }
+
+/* Recommendation reason badge */
+.reason-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.reason-interest { background: rgba(201,168,76,0.18); color: #8a6d20; }
+.reason-popular  { background: rgba(192,57,43,0.12); color: var(--error); }
+.reason-new      { background: rgba(15,31,61,0.07); color: var(--navy); }
 
 .search-bar {
   position: relative;
@@ -151,15 +218,28 @@ function formatDate(d) {
   50% { transform: translateX(10px) rotate(5deg); }
 }
 
+.trip-card-body { display: block; }
+
+.trip-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sand-dark);
+}
+
 .trip-card-author {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
   font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 500;
+  transition: color 0.2s;
 }
+.trip-card-author:hover { color: var(--navy); }
 
 .author-avatar {
   width: 22px;

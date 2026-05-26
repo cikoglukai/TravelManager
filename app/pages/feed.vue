@@ -5,6 +5,8 @@
       <h2>Your Feed</h2>
     </div>
 
+    <SocialTabs />
+
     <p v-if="error" class="form-error">{{ error }}</p>
     <p v-if="pending" class="loading">Loading your feed…</p>
 
@@ -19,8 +21,9 @@
     </div>
 
     <div v-else class="empty-state">
-      <p>No feed entries yet. Follow other travellers from the
-        <NuxtLink to="/community">community</NuxtLink> to see their trips here.</p>
+      <div class="empty-icon">📰</div>
+      <p>Your feed is empty. Follow travellers and their new trips show up here.</p>
+      <NuxtLink to="/discover" class="btn btn-gold" style="margin-top:16px">Find travellers to follow →</NuxtLink>
     </div>
   </div>
 </template>
@@ -41,3 +44,7 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.empty-icon { font-size: 2.6rem; margin-bottom: 8px; }
+</style>
