@@ -18,8 +18,8 @@
         </p>
       </div>
 
-      <!-- Progress bar -->
-      <div class="wizard-progress">
+      <!-- Progress bar (hidden once saved) -->
+      <div class="wizard-progress" v-if="!savedConfirm">
         <div
           v-for="(s, i) in STEPS"
           :key="i"
@@ -37,6 +37,14 @@
           <div class="progress-fill" :style="{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }"></div>
         </div>
       </div>
+
+      <!-- Draft restored notice -->
+      <div v-if="draftRestored && !savedConfirm" class="draft-banner">
+        ✓ Unsaved draft restored. <button class="draft-discard" @click="discardDraft">Start fresh</button>
+      </div>
+
+      <!-- Step container — directional slide on step change -->
+      <div class="wizard-steps" :class="`dir-${direction}`">
 
       <!-- ── Step 1: Destination (template mode only) ── -->
       <div v-if="step === 1 && planMode === 'template'" class="wizard-step">
@@ -371,6 +379,9 @@
           </div>
         </div>
 
+        <p v-if="!customRouteValid" class="validation-hint">
+          Add a <strong>route name</strong> and <strong>duration</strong> to continue.
+        </p>
         <div class="wizard-nav">
           <span></span>
           <button class="btn btn-gold" :disabled="!customRouteValid" @click="step = 2">
@@ -433,6 +444,9 @@
           </div>
         </div>
 
+        <p v-if="!customTransportValid" class="validation-hint">
+          Pick a <strong>transport type</strong> above to continue.
+        </p>
         <div class="wizard-nav">
           <button class="btn btn-secondary" @click="step = 1">← Route</button>
           <button class="btn btn-gold" :disabled="!customTransportValid" @click="step = 3">
@@ -475,8 +489,9 @@
         <div class="custom-form">
           <div class="cf-row">
             <label>Name *</label>
-            <input v-model="custom.accommodation_name" type="text"
-              placeholder='e.g. "Hotel Bristol", "Mountain Hostel"' />
+            <input ref="accommodationNameInput" v-model="custom.accommodation_name" type="text"
+              autocomplete="off"
+              placeholder='Search a real hotel/stay — e.g. "Hotel Bristol"' />
           </div>
           <div class="cf-row cf-row--split">
             <div>
@@ -498,6 +513,9 @@
           </div>
         </div>
 
+        <p v-if="!customAccomValid" class="validation-hint">
+          Pick an <strong>accommodation type</strong> and enter a <strong>name</strong> to continue.
+        </p>
         <div class="wizard-nav">
           <button class="btn btn-secondary" @click="step = 2">← Transport</button>
           <button class="btn btn-gold" :disabled="!customAccomValid" @click="step = 4">
@@ -598,6 +616,8 @@
         </div>
       </div>
 
+      </div><!-- /.wizard-steps -->
+
       <!-- ── Existing plan summary (shown after save) ── -->
       <div v-if="savedConfirm" class="saved-confirm">
         <div class="confirm-icon">✓</div>
@@ -658,6 +678,20 @@ const saving       = ref(false)
 const saveError    = ref('')
 const savedConfirm = ref(false)
 
+// Slide direction for the step transition: forward when advancing, back when
+// returning. Drives the .dir-fwd / .dir-back classes on the steps wrapper.
+const direction = ref('fwd')
+
+// Each step can be a very different height (the LiveOffers panel is tall), so
+// jump back to the top on every change — the user always lands on the new
+// step's heading instead of somewhere mid-page. Honours reduced-motion.
+watch(step, (to, from) => {
+  direction.value = to >= from ? 'fwd' : 'back'
+  if (!import.meta.client) return
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+})
+
 // Template-mode selections
 const sel = reactive({
   destination:   null,
@@ -683,6 +717,45 @@ const custom = reactive({
   accommodation_rating: '',
   accommodation_notes: '',
 })
+
+// Places autocomplete on the custom accommodation name → pick a real stay.
+const accommodationNameInput = ref(null)
+usePlacesAutocomplete(accommodationNameInput, {
+  types: ['establishment'],
+  onSelect: ({ name }) => { custom.accommodation_name = name },
+})
+
+// ── Draft autosave (custom mode) ──────────────────────────────────────────────
+// Persist the in-progress custom plan to localStorage so a reload / accidental
+// navigation doesn't lose work. Cleared once the plan is saved.
+const DRAFT_KEY = `tm:plan-draft:${tripId}`
+const draftRestored = ref(false)
+
+onMounted(() => {
+  if (planMode.value !== 'custom' || !import.meta.client) return
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return
+    const d = JSON.parse(raw)
+    if (d.custom) Object.assign(custom, d.custom)
+    if (d.notes) notes.value = d.notes
+    if (d.step) step.value = d.step
+    draftRestored.value = true
+  } catch { /* corrupt draft — ignore */ }
+})
+
+watch([custom, notes, step], () => {
+  if (planMode.value !== 'custom' || !import.meta.client) return
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ custom, notes: notes.value, step: step.value }))
+}, { deep: true })
+
+function discardDraft() {
+  if (import.meta.client) localStorage.removeItem(DRAFT_KEY)
+  Object.keys(custom).forEach(k => { custom[k] = '' })
+  notes.value = ''
+  step.value = 1
+  draftRestored.value = false
+}
 
 const TRANSPORT_TYPES     = ['flight', 'train', 'bus', 'car', 'ferry']
 const ACCOMMODATION_TYPES = ['hotel', 'hostel', 'apartment', 'guesthouse', 'camping']
@@ -895,6 +968,7 @@ async function savePlan() {
     }
     savedConfirm.value = true
     step.value = 99  // hide wizard
+    if (import.meta.client) localStorage.removeItem(DRAFT_KEY)  // draft consumed
   } catch (err) {
     saveError.value = err.data?.statusMessage || err.message || 'Something went wrong'
   } finally {
@@ -1082,6 +1156,53 @@ function starRating(r)           { return '★'.repeat(Math.round(r)) + '☆'.re
   padding: 40px;
   box-shadow: var(--shadow);
 }
+/* Each step is its own v-if block, so a step change unmounts the old and mounts
+   a fresh .wizard-step → the entrance animation replays. Direction comes from
+   the .dir-fwd / .dir-back class the wrapper carries (set in script). */
+.dir-fwd  .wizard-step { animation: stepInFwd 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.dir-back .wizard-step { animation: stepInBack 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes stepInFwd {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes stepInBack {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Draft restored banner */
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--navy);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+.draft-discard {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: auto;
+}
+.draft-discard:hover { color: var(--error); }
+
+/* Inline validation hint — tells the user why "Next" is disabled */
+.validation-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 20px;
+  text-align: right;
+}
+.validation-hint strong { color: var(--navy); }
 .step-heading {
   font-family: 'Playfair Display', serif;
   font-size: 1.5rem;
@@ -1550,10 +1671,40 @@ function starRating(r)           { return '★'.repeat(Math.round(r)) + '☆'.re
   border-color: var(--gold);
   background: rgba(201,168,76,0.08);
 }
+.type-pill:active { transform: scale(0.95); }
 .type-pill--active {
   border-color: var(--gold);
   background: var(--gold);
   color: var(--navy);
+  animation: pillPop 0.22s ease;
+}
+@keyframes pillPop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ── Save confirmation — reward moment ── */
+.saved-confirm { animation: confirmIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.confirm-icon  { animation: confirmPop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s backwards; }
+@keyframes confirmIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes confirmPop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* Respect users who prefer no motion: keep the layout, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .dir-fwd .wizard-step,
+  .dir-back .wizard-step,
+  .saved-confirm,
+  .confirm-icon,
+  .type-pill--active { animation: none; }
+  .progress-fill { transition: none; }
 }
 
 @media (max-width: 640px) {

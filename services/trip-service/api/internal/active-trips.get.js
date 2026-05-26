@@ -6,7 +6,7 @@ import { getDb } from '@travelmanager/shared/db'
 export default defineEventHandler(async () => {
   const db = getDb()
   const { rows } = await db.query(
-    `SELECT id AS trip_id, user_uid, title, destination, start_date
+    `SELECT id AS trip_id, user_uid, title, destination, dest_country, start_date
      FROM trips
      WHERE start_date >= CURRENT_DATE::text
      ORDER BY start_date ASC

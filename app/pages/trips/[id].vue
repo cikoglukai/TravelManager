@@ -22,13 +22,31 @@
     </div>
 
     <div v-else-if="trip">
-      <div class="trip-detail">
+      <!-- In-page section nav — jump around a long trip page -->
+      <nav class="trip-subnav">
+        <button class="trip-subnav-item" @click="scrollToSection('sec-overview')">Overview</button>
+        <button v-if="detailMarkers.length" class="trip-subnav-item" @click="scrollToSection('sec-map')">Map</button>
+        <button class="trip-subnav-item" @click="scrollToSection('sec-social')">Community</button>
+        <button class="trip-subnav-item" @click="scrollToSection('sec-reviews')">Reviews</button>
+        <button class="trip-subnav-item" @click="scrollToSection('sec-offers')">Offers</button>
+        <button class="trip-subnav-item" @click="scrollToSection('sec-plan')">Plan</button>
+      </nav>
+
+      <div id="sec-overview" class="trip-detail">
         <div class="trip-detail-header">
-          <h1>{{ trip.title }}</h1>
+          <h1>
+            <span v-if="tripWarning" class="title-warn" :title="`Travel warning: ${tripWarning.country}`">❗</span>
+            {{ trip.title }}
+          </h1>
           <div class="trip-detail-meta">
             <span v-if="trip.origin" class="badge badge-dest">🛫 {{ trip.origin }}</span>
             <span class="badge badge-dest">📍 {{ trip.destination }}</span>
             <span class="badge badge-date">📅 {{ formatDate(trip.start_date) }}</span>
+          </div>
+          <div v-if="tripWarning" class="trip-warning-box">
+            <span class="tw-icon">⚠️</span>
+            <span><strong>{{ tripWarning.country }}</strong> — {{ tripWarning.title }}</span>
+            <span class="tw-sev" :class="tripWarning.severity">{{ tripWarning.severity }}</span>
           </div>
         </div>
 
@@ -45,8 +63,14 @@
         </div>
       </div>
 
+      <!-- ── Map section ── -->
+      <div v-if="detailMarkers.length" id="sec-map" class="map-section">
+        <h2 class="map-section-title">On the Map</h2>
+        <TripMap :markers="detailMarkers" />
+      </div>
+
       <!-- ── Likes section ── -->
-      <div class="likes-section">
+      <div id="sec-social" class="likes-section">
         <div class="likes-bar">
           <button
             class="btn-like"
@@ -94,7 +118,7 @@
       </div>
 
       <!-- ── Reviews section ── -->
-      <div class="reviews-section">
+      <div id="sec-reviews" class="reviews-section">
         <h2 class="reviews-title">Reviews</h2>
 
         <!-- Write / edit review (only for non-owners) -->
@@ -144,7 +168,7 @@
       </div>
 
       <!-- ── Live Offers section ── -->
-      <div class="live-offers-section">
+      <div id="sec-offers" class="live-offers-section">
         <LiveOffers
           :origin="trip.origin"
           :destination="trip.destination"
@@ -153,7 +177,7 @@
       </div>
 
       <!-- ── Travel Plan section ── -->
-      <div class="plan-section">
+      <div id="sec-plan" class="plan-section">
         <div class="plan-section-header">
           <div>
             <h2 class="plan-section-title">Travel Plan</h2>
@@ -230,6 +254,8 @@
 <script setup>
 const { user, waitAuthReady } = useAuth()
 const { apiFetch } = useApiFetch()
+const { toastError, toastSuccess } = useToast()
+const { confirm } = useConfirm()
 const route = useRoute()
 const router = useRouter()
 
@@ -276,6 +302,52 @@ const likeLoading    = ref(false)
 const showComments   = ref(false)
 const myLikeComment  = ref('')
 
+const planLocations  = ref([])
+const alerts         = ref([])
+
+// Active travel warning for this trip's country (shown as a red marker on the
+// trip instead of a global page banner).
+const tripWarning = computed(() => {
+  const t = trip.value
+  if (!t) return null
+  const country = String(t.dest_country || '').toLowerCase()
+  const dest = String(t.destination || '').toLowerCase()
+  return alerts.value.find((a) => {
+    const ac = String(a.country || '').toLowerCase()
+    return ac && (ac === country || dest.includes(ac))
+  }) || null
+})
+
+// Map pins for this trip: the destination (coloured by any active warning) plus
+// every plan location that has been geocoded.
+const detailMarkers = computed(() => {
+  const out = []
+  const t = trip.value
+  if (t?.dest_lat != null && t?.dest_lng != null) {
+    const dest = String(t.destination || '').toLowerCase()
+    const alert = alerts.value.find(a => a.country && dest.includes(String(a.country).toLowerCase()))
+    out.push({
+      lat: Number(t.dest_lat),
+      lng: Number(t.dest_lng),
+      title: t.destination,
+      kind: alert ? 'warning' : 'trip',
+      severity: alert?.severity || null,
+    })
+  }
+  const CAT_EMOJI = { hotel: '🏨', restaurant: '🍽️', airport: '✈️', attraction: '📸', other: '📍' }
+  for (const l of planLocations.value) {
+    if (l.latitude == null || l.longitude == null) continue
+    out.push({
+      lat: Number(l.latitude),
+      lng: Number(l.longitude),
+      title: `${CAT_EMOJI[l.category] || '📍'} ${l.name}`,
+      kind: 'hotel', // green pin for stops/places
+      photo: l.image_url || null,
+    })
+  }
+  return out
+})
+
 const isOwner  = computed(() => !!user.value && trip.value?.user_uid === user.value.firebase_uid)
 const myReview = computed(() => reviews.value.find(r => r.reviewer_id === user.value?.firebase_uid) ?? null)
 
@@ -299,8 +371,14 @@ onMounted(async () => {
   await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   await fetchTrip()
-  await Promise.all([fetchPlan(), fetchReviews(), fetchLikes()])
+  await Promise.all([fetchPlan(), fetchReviews(), fetchLikes(), fetchMapData()])
 })
+
+// Map enrichment — best-effort, never blocks the page.
+async function fetchMapData() {
+  planLocations.value = await apiFetch(`/api/locations/trip/${route.params.id}`).catch(() => [])
+  alerts.value = await apiFetch('/api/alerts').catch(() => [])
+}
 
 async function fetchTrip() {
   loading.value = true
@@ -346,7 +424,7 @@ async function toggleLike() {
     }
     await fetchLikes()
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not update like')
+    toastError(err.data?.statusMessage || 'Could not update like')
   } finally {
     likeLoading.value = false
   }
@@ -362,7 +440,7 @@ async function saveLikeComment() {
     })
     await fetchLikes()
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not save comment')
+    toastError(err.data?.statusMessage || 'Could not save comment')
   } finally {
     likeLoading.value = false
   }
@@ -389,15 +467,16 @@ async function submitReview() {
       body: { stars: formStars.value, comment: formComment.value },
     })
     await fetchReviews()
+    toastSuccess(myReview.value ? 'Review updated' : 'Review posted')
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not save review')
+    toastError(err.data?.statusMessage || 'Could not save review')
   } finally {
     submitting.value = false
   }
 }
 
 async function deleteMyReview() {
-  if (!confirm('Delete your review?')) return
+  if (!(await confirm({ title: 'Delete your review?', confirmText: 'Delete', danger: true }))) return
   submitting.value = true
   try {
     await apiFetch(`/api/reviews/trip/${route.params.id}`, { method: 'DELETE' })
@@ -405,7 +484,7 @@ async function deleteMyReview() {
     formComment.value = ''
     await fetchReviews()
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not delete review')
+    toastError(err.data?.statusMessage || 'Could not delete review')
   } finally {
     submitting.value = false
   }
@@ -417,25 +496,25 @@ function onSaved(savedTrip) {
 }
 
 async function deleteTrip() {
-  if (!confirm(`Delete "${trip.value.title}"? This cannot be undone.`)) return
+  if (!(await confirm({ title: 'Delete trip?', message: `"${trip.value.title}" will be permanently deleted. This cannot be undone.`, confirmText: 'Delete', danger: true }))) return
   deleting.value = true
   try {
     await apiFetch(`/api/trips/${trip.value.id}`, { method: 'DELETE' })
     router.push('/trips')
   } catch (err) {
-    alert(err.data?.statusMessage || 'Delete failed')
+    toastError(err.data?.statusMessage || 'Delete failed')
     deleting.value = false
   }
 }
 
 async function deletePlan() {
-  if (!confirm('Remove the travel plan for this trip?')) return
+  if (!(await confirm({ title: 'Remove travel plan?', message: 'The plan for this trip will be removed.', confirmText: 'Remove', danger: true }))) return
   deletingPlan.value = true
   try {
     await apiFetch(`/api/travel-plans/${trip.value.id}`, { method: 'DELETE' })
     travelPlanData.value = null
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not remove plan')
+    toastError(err.data?.statusMessage || 'Could not remove plan')
   } finally {
     deletingPlan.value = false
   }
@@ -443,6 +522,14 @@ async function deletePlan() {
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function scrollToSection(id) {
+  if (!import.meta.client) return
+  const el = document.getElementById(id)
+  if (!el) return
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
 }
 
 const TRANSPORT_ICONS    = { flight: '✈️', train: '🚂', bus: '🚌', car: '🚗', ferry: '⛴️' }
@@ -457,12 +544,89 @@ function accommodationIcon(t) { return ACCOMMODATION_ICONS[t] ?? '🏠' }
   gap: 12px;
 }
 
+/* ── Per-trip travel warning ── */
+.title-warn { color: var(--error); margin-right: 6px; }
+.trip-warning-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: #fdf0ef;
+  border: 1px solid rgba(192,57,43,0.35);
+  border-left: 4px solid var(--error);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: #8a2d22;
+}
+.tw-icon { font-size: 1.1rem; }
+.tw-sev {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 100px;
+  color: #fff;
+}
+.tw-sev.warning { background: var(--error); }
+.tw-sev.partial { background: #e6a23c; }
+
+/* ── In-page section nav ── */
+.trip-subnav {
+  position: sticky;
+  top: 64px; /* below the app navbar */
+  z-index: 40;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  background: rgba(245,240,232,0.9);
+  backdrop-filter: blur(8px);
+  padding: 10px 0;
+  margin-bottom: 20px;
+}
+.trip-subnav-item {
+  background: var(--white);
+  border: 1px solid var(--sand-dark);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.trip-subnav-item:hover {
+  border-color: var(--gold);
+  color: var(--navy);
+}
+/* Sections clear the sticky navbar + subnav when jumped to */
+#sec-overview, #sec-map, #sec-social, #sec-reviews, #sec-offers, #sec-plan {
+  scroll-margin-top: 120px;
+}
+
 .live-offers-section {
   background: var(--white);
   border-radius: var(--radius);
   padding: 28px 36px;
   box-shadow: var(--shadow);
   margin-top: 24px;
+}
+
+.map-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px 36px;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+.map-section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--navy);
+  font-weight: 700;
+  margin-bottom: 20px;
 }
 
 /* ── Travel Plan section ── */

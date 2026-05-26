@@ -28,9 +28,22 @@ export async function pollWarnings() {
   const cfg = cfgEnv()
   const db = getDb()
 
+  // Fetch the feed outside the DB try-block. A transient upstream failure must
+  // not hard-fail the CronJob (which would mark the job Error and alert ops for
+  // nothing); we record it and return a structured non-fatal result instead.
+  let res
+  try {
+    res = await $fetch(cfg.warningsApiUrl)
+  } catch (err) {
+    control.warnings.errors++
+    control.warnings.lastRun = new Date().toISOString()
+    control.warnings.lastDurationMs = Date.now() - started
+    console.error('[travel-info] warnings feed fetch failed', err?.message || err)
+    return { ok: false, stage: 'fetch', error: String(err?.message || err) }
+  }
+
   let upserted = 0
   try {
-    const res = await $fetch(cfg.warningsApiUrl)
     const entries = res?.response ?? {}
 
     for (const [id, w] of Object.entries(entries)) {
@@ -78,7 +91,7 @@ export async function runDiff() {
   const cfg = cfgEnv()
   const db = getDb()
 
-  const trips = await $fetch('/api/internal/active-trips', { baseURL: cfg.tripServiceUrl }).catch(() => [])
+  const trips = await $fetch('/api/internal/active-trips', { baseURL: cfg.tripServiceUrl }).catch((e) => { console.error('[travel-info] active-trips fetch failed', e?.message || e); return [] })
   const { rows: warnings } = await db.query(
     `SELECT country_name, severity, title, content_hash FROM warnings_cache WHERE severity <> 'none'`
   )
@@ -97,7 +110,10 @@ export async function runDiff() {
 
   let raised = 0
   for (const trip of trips) {
-    const destTokens = tokenize(trip.destination)
+    // Match on the geocoded country (warnings are per-country, but users pick a
+    // city like "Tehran"); keep the destination tokens too for trips whose text
+    // is itself a country name.
+    const destTokens = [...tokenize(trip.destination), ...tokenize(trip.dest_country)]
     for (const w of warnings) {
       if (!matchesCountry(destTokens, w.country_name)) continue
 
@@ -135,19 +151,23 @@ export async function pollWeather() {
 
   let updated = 0
   try {
-    const trips = await $fetch('/api/internal/active-trips', { baseURL: cfg.tripServiceUrl }).catch(() => [])
+    const trips = await $fetch('/api/internal/active-trips', { baseURL: cfg.tripServiceUrl }).catch((e) => { console.error('[travel-info] active-trips fetch failed', e?.message || e); return [] })
     const cities = [...new Set(trips.map(t => String(t.destination || '').split(/[&,]/)[0].trim()).filter(Boolean))].slice(0, 50)
 
     for (const city of cities) {
+      // Open-Meteo intermittently returns 502/504 under load — retry a few
+      // times with backoff so a transient gateway error doesn't drop the city.
       const geo = await $fetch('https://geocoding-api.open-meteo.com/v1/search', {
         query: { name: city, count: 1 },
-      }).catch(() => null)
+        retry: 3, retryDelay: 700, timeout: 10000,
+      }).catch((e) => { control.weather.errors++; console.error('[travel-info] geocode failed for', city, e?.message || e); return null })
       const place = geo?.results?.[0]
       if (!place) continue
 
       const fc = await $fetch(cfg.weatherApiUrl, {
         query: { latitude: place.latitude, longitude: place.longitude, daily: 'temperature_2m_max,temperature_2m_min', forecast_days: 1, timezone: 'auto' },
-      }).catch(() => null)
+        retry: 3, retryDelay: 700, timeout: 10000,
+      }).catch((e) => { control.weather.errors++; console.error('[travel-info] forecast failed for', city, e?.message || e); return null })
       const max = fc?.daily?.temperature_2m_max?.[0]
       const min = fc?.daily?.temperature_2m_min?.[0]
       if (max == null) continue

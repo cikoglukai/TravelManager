@@ -17,6 +17,7 @@ const ROUTES = [
   { prefix: '/api/b2b',          service: 'destination' },
   { prefix: '/api/feed',         service: 'social' },
   { prefix: '/api/alerts',       service: 'travelInfo' },
+  { prefix: '/api/weather',      service: 'travelInfo' },
 ]
 
 export function resolveService(path) {

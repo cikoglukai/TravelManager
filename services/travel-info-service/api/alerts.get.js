@@ -1,5 +1,5 @@
-// GET /api/alerts — active travel alerts for the authenticated user's trips.
-// Powers the SPA alert banner. Joined weather hint included when available.
+// GET /api/alerts — active travel warnings for the authenticated user's trips.
+// Powers the SPA alert banner. Weather is served separately by GET /api/weather.
 import { getDb } from '@travelmanager/shared/db'
 
 export default defineEventHandler(async (event) => {

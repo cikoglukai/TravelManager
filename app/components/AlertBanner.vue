@@ -1,11 +1,11 @@
 <!-- Travel-warning banner. Pulls /api/alerts (Travel Info service) and shows any
      active warnings affecting the user's trips. -->
 <template>
-  <div v-if="alerts.length && !dismissed" class="alert-banner">
+  <div v-if="uniqueAlerts.length && !dismissed" class="alert-banner">
     <div class="alert-inner">
       <span class="alert-icon">⚠️</span>
       <div class="alert-list">
-        <p v-for="a in alerts.slice(0, 3)" :key="a.trip_id + a.title" class="alert-item">
+        <p v-for="a in uniqueAlerts.slice(0, 3)" :key="a.country + a.title" class="alert-item">
           <strong>{{ a.country }}</strong> — {{ a.title }}
           <span class="alert-sev" :class="a.severity">{{ a.severity }}</span>
         </p>
@@ -19,6 +19,18 @@
 const { apiFetch } = useApiFetch()
 const alerts = ref([])
 const dismissed = ref(false)
+
+// The same country warning can hit several of the user's trips — collapse to
+// one banner row per country+title so it isn't shown twice.
+const uniqueAlerts = computed(() => {
+  const seen = new Set()
+  return alerts.value.filter((a) => {
+    const key = `${a.country}|${a.title}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
 
 onMounted(async () => {
   try {
