@@ -5,6 +5,10 @@
       <NuxtLink to="/trips/new" class="btn btn-gold">+ New Trip</NuxtLink>
     </div>
 
+    <WeatherStrip v-if="!loading && trips.length" />
+
+    <TripMap v-if="!loading && tripMarkers.length" :markers="tripMarkers" class="trips-map" />
+
     <div v-if="loading" class="loading-state">
       <span class="loading-spinner">✈</span>
       <p>Loading your trips…</p>
@@ -16,7 +20,13 @@
         :key="trip.id"
         :to="`/trips/${trip.id}`"
         class="trip-card"
+        :class="{ 'trip-card--warned': tripWarning(trip) }"
       >
+        <span
+          v-if="tripWarning(trip)"
+          class="warn-flag"
+          :title="`Travel warning: ${tripWarning(trip).country} — ${tripWarning(trip).title}`"
+        >❗</span>
         <div class="trip-card-meta">
           <span class="trip-card-destination">{{ trip.destination }}</span>
           <span class="trip-card-date">{{ formatDate(trip.start_date) }}</span>
@@ -40,13 +50,46 @@ const { apiFetch } = useApiFetch()
 const router = useRouter()
 
 const trips = ref([])
+const alerts = ref([])
 const loading = ref(true)
+
+// Trip pins for the map, coloured red/amber when an active warning matches the
+// trip's destination country (alert data already comes from /api/alerts).
+// Active warning matching a trip — match on the geocoded country (dest_country),
+// falling back to a substring match on the destination text.
+function tripWarning(trip) {
+  const country = String(trip.dest_country || '').toLowerCase()
+  const dest = String(trip.destination || '').toLowerCase()
+  return alerts.value.find((a) => {
+    const ac = String(a.country || '').toLowerCase()
+    return ac && (ac === country || dest.includes(ac))
+  }) || null
+}
+
+// Trip pins for the map, coloured by any active warning.
+const tripMarkers = computed(() =>
+  trips.value
+    .filter(t => t.dest_lat != null && t.dest_lng != null)
+    .map((t) => {
+      const alert = tripWarning(t)
+      return {
+        lat: Number(t.dest_lat),
+        lng: Number(t.dest_lng),
+        title: t.title,
+        kind: alert ? 'warning' : 'trip',
+        severity: alert?.severity || null,
+        link: `/trips/${t.id}`,
+      }
+    })
+)
 
 onMounted(async () => {
   await waitAuthReady()
   if (!user.value) return navigateTo('/register')
   try {
     trips.value = await apiFetch('/api/trips')
+    // Best-effort — map still renders without alert colouring.
+    alerts.value = await apiFetch('/api/alerts').catch(() => [])
   } catch {
     router.push('/register')
   } finally {
@@ -60,6 +103,20 @@ function formatDate(date) {
 </script>
 
 <style scoped>
+.trips-map { margin-bottom: 20px; }
+
+.trip-card { position: relative; }
+.trip-card--warned { box-shadow: inset 0 0 0 2px rgba(192,57,43,0.5), var(--shadow); }
+.warn-flag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 1.1rem;
+  line-height: 1;
+  filter: saturate(1.4);
+  cursor: help;
+}
+
 .loading-state,
 .empty-state {
   background: var(--white);

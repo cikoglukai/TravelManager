@@ -13,7 +13,7 @@
 
       <!-- Center: Logo -->
       <NuxtLink to="/trips" class="nav-brand">
-        <img :src="'/logo_banner.png'" alt="One Cloud Away" class="brand-logo" />
+        <img :src="brandLogo || '/logo_banner.png'" alt="One Cloud Away" class="brand-logo" />
         <span class="brand-text">One Cloud Away</span>
       </NuxtLink>
 
@@ -33,20 +33,23 @@
       <div v-if="menuOpen" class="nav-dropdown" @click="menuOpen = false">
         <NuxtLink to="/trips" class="nav-dropdown-item">My Trips</NuxtLink>
         <NuxtLink to="/community" class="nav-dropdown-item">Community</NuxtLink>
+        <NuxtLink to="/discover" class="nav-dropdown-item">Discover Travellers</NuxtLink>
         <NuxtLink to="/feed" class="nav-dropdown-item">My Feed</NuxtLink>
         <NuxtLink to="/explore" class="nav-dropdown-item nav-dropdown-globe">🌍 Explore</NuxtLink>
+        <NuxtLink v-if="isDestinationMgr" to="/b2b" class="nav-dropdown-item">Partner Insights</NuxtLink>
         <div class="nav-dropdown-divider"></div>
         <NuxtLink to="/trips/new" class="nav-dropdown-item nav-dropdown-new">+ New Trip</NuxtLink>
       </div>
     </nav>
 
-    <AlertBanner v-if="hydrated && user" />
-
     <NuxtPage />
+
+    <ToastHost />
+    <ConfirmDialog />
 
     <footer class="footer">
       <div class="footer-inner">
-        <span class="footer-brand"><img :src="'/logo_banner.png'" alt="One Cloud Away" class="footer-logo" /> One Cloud Away</span>
+        <span class="footer-brand"><img :src="brandLogo || '/logo_banner.png'" alt="One Cloud Away" class="footer-logo" /> One Cloud Away</span>
         <span class="footer-divider">·</span>
         <span>Kai Cikoglu · Nina Karl · Johanna Prinz · Daniel Rill</span>
         <span class="footer-divider">·</span>
@@ -61,6 +64,10 @@ const { user, logout } = useAuth()
 const router = useRouter()
 const hydrated = ref(false)
 const menuOpen = ref(false)
+
+// White-label logo (set by plugins/whitelabel.client.js) + role-gated nav.
+const brandLogo = useState('brandLogo', () => null)
+const isDestinationMgr = computed(() => user.value?.role === 'destinationMgr')
 
 onMounted(() => {
   hydrated.value = true
@@ -198,6 +205,12 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown-item:hover {
   background: rgba(255,255,255,0.06);
   color: var(--white);
+}
+/* Current page — so the user always knows where they are. */
+.nav-dropdown-item.router-link-active {
+  color: var(--white);
+  box-shadow: inset 3px 0 0 var(--gold);
+  background: rgba(255,255,255,0.04);
 }
 .nav-dropdown-globe { color: var(--gold) !important; }
 .nav-dropdown-globe:hover { color: var(--gold-light) !important; }

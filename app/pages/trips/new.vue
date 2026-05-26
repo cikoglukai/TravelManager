@@ -79,10 +79,25 @@ function onSaved(trip) {
   gap: 12px;
 }
 
+.chooser-card {
+  animation: cardIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.chooser-card:nth-child(1) { animation-delay: 0.04s; }
+.chooser-card:nth-child(2) { animation-delay: 0.12s; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
 .chooser-card:hover {
   transform: translateY(-3px);
   border-color: var(--gold);
   box-shadow: var(--shadow-lg);
+}
+.chooser-card:active { transform: translateY(-1px) scale(0.99); }
+@media (prefers-reduced-motion: reduce) {
+  .chooser-card { animation: none; }
+  .chooser-card:hover, .chooser-card:active { transform: none; }
 }
 
 .chooser-icon {
