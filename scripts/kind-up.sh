@@ -48,7 +48,37 @@ for s in "${SERVICES[@]}"; do
 done
 
 echo "==> Helm install"
-helm upgrade --install travelmanager k8s/travelmanager -f k8s/travelmanager/values-local.yaml --wait --timeout 5m
+# Layer the gitignored secret values (Firebase keys, RapidAPI key, etc.) on top
+# when present so the frontend gets NUXT_PUBLIC_FIREBASE_* and auth works.
+HELM_VALUES=(-f k8s/travelmanager/values-local.yaml)
+if [ -f k8s/travelmanager/values-local.secret.yaml ]; then
+  HELM_VALUES+=(-f k8s/travelmanager/values-local.secret.yaml)
+else
+  echo "   (no values-local.secret.yaml — run ./scripts/gen-local-secret.sh for Firebase/API keys)"
+fi
+helm upgrade --install travelmanager k8s/travelmanager "${HELM_VALUES[@]}" --wait --timeout 5m
+
+# Schema bootstrap is fire-and-forget at service startup with no retry, so on a
+# fresh cluster the DB-backed services race ahead of Postgres and fail with
+# ECONNREFUSED — leaving their tables uncreated (login then 500s on a missing
+# `users` table). Postgres is Ready now (helm --wait), so restart those services
+# to re-run their bootstrap against a live DB.
+echo "==> Re-run schema bootstrap (restart DB-backed services now Postgres is up)"
+kubectl rollout status deploy/postgres --timeout=120s
+DB_SERVICES=(user-service trip-service destination-service social-service travel-info-service notification-service)
+for s in "${DB_SERVICES[@]}"; do
+  kubectl rollout restart "deploy/$s"
+done
+for s in "${DB_SERVICES[@]}"; do
+  kubectl rollout status "deploy/$s" --timeout=120s
+done
+
+# Backfill geocoding for any pre-existing trips so they get map coords +
+# dest_country (needed for the trip map and country travel-warning matching).
+# Idempotent — only touches trips with a NULL country. Non-fatal on failure.
+echo "==> Backfill geocode for pre-existing trips"
+kubectl exec deploy/trip-service -- node -e \
+  "fetch('http://localhost:8080/api/internal/backfill-geocode',{method:'POST'}).then(r=>r.json()).then(d=>console.log('   backfill:',JSON.stringify(d))).catch(e=>{console.error('   backfill skipped:',e.message);process.exit(0)})" || true
 
 echo "==> Done. Pods:"
 kubectl get pods

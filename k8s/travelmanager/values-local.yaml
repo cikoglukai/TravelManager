@@ -15,8 +15,15 @@ global:
   extraEnv:
     - { name: PUBSUB_DISABLED, value: "1" }
     - { name: GATEWAY_SKIP_AUTH, value: "1" }
+    # Route Firestore (likes / review-comments) to the in-cluster emulator —
+    # no GCP creds needed locally. Emulator serves only the (default) database.
+    - { name: FIRESTORE_EMULATOR_HOST, value: "firestore-emulator:8080" }
+    - { name: FIRESTORE_DATABASE_ID, value: "(default)" }
 
 postgres:
+  enabled: true
+
+firestoreEmulator:
   enabled: true
 
 externalSecrets:

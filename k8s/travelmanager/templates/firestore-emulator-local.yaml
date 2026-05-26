@@ -1,0 +1,57 @@
+{{- if .Values.firestoreEmulator.enabled }}
+# In-cluster Firestore emulator for LOCAL clusters (kind/minikube) only. Lets
+# likes / review-comments work without GCP credentials. Not for prod — prod
+# talks to real Firestore via Workload Identity ADC. Ephemeral: data is lost on
+# pod restart, fine for local dev/demo. Consumed by services that set
+# FIRESTORE_EMULATOR_HOST (see values-local.yaml global.extraEnv).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firestore-emulator
+  labels:
+    app: firestore-emulator
+    {{- include "tm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firestore-emulator
+  template:
+    metadata:
+      labels:
+        app: firestore-emulator
+        app.kubernetes.io/part-of: travelmanager
+    spec:
+      containers:
+        - name: firestore-emulator
+          image: google/cloud-sdk:emulators
+          command: ["/bin/bash", "-c"]
+          args:
+            - >
+              gcloud emulators firestore start
+              --host-port=0.0.0.0:8080
+              --database-mode=firestore-native
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firestore-emulator
+  labels:
+    app: firestore-emulator
+spec:
+  selector:
+    app: firestore-emulator
+  ports:
+    - port: 8080
+      targetPort: 8080
+{{- end }}

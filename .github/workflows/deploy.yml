@@ -104,10 +104,27 @@ jobs:
         run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "${{ secrets.GCP_PROJECT }}"
       - name: Helm upgrade
         run: |
+          # Public NUXT_* config (Firebase web config + Google Maps browser key)
+          # reaches every pod as runtime env via global.extraEnv. These are
+          # client-side public values (they ship in the SPA bundle); the Maps
+          # browser key is protected by HTTP-referrer restriction, not secrecy.
+          # Sourced from GitHub Actions secrets so they stay out of git.
           helm upgrade --install travelmanager k8s/travelmanager \
             --set global.imageRegistry=${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/travelmanager \
             --set global.imageTag=${GITHUB_SHA} \
             --set global.gcpProject=${{ secrets.GCP_PROJECT }} \
             --set global.cloudSqlInstance=${{ secrets.CLOUD_SQL_INSTANCE }} \
             --set serviceAccount.gcpServiceAccount=travelmanager-gke@${{ secrets.GCP_PROJECT }}.iam.gserviceaccount.com \
+            --set-string "global.extraEnv[0].name=NUXT_PUBLIC_GOOGLE_MAPS_KEY" \
+            --set-string "global.extraEnv[0].value=${{ secrets.NUXT_PUBLIC_GOOGLE_MAPS_KEY }}" \
+            --set-string "global.extraEnv[1].name=NUXT_PUBLIC_FIREBASE_API_KEY" \
+            --set-string "global.extraEnv[1].value=${{ secrets.NUXT_PUBLIC_FIREBASE_API_KEY }}" \
+            --set-string "global.extraEnv[2].name=NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN" \
+            --set-string "global.extraEnv[2].value=${{ secrets.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}" \
+            --set-string "global.extraEnv[3].name=NUXT_PUBLIC_FIREBASE_PROJECT_ID" \
+            --set-string "global.extraEnv[3].value=${{ secrets.NUXT_PUBLIC_FIREBASE_PROJECT_ID }}" \
+            --set-string "global.extraEnv[4].name=NUXT_PUBLIC_FIREBASE_APP_ID" \
+            --set-string "global.extraEnv[4].value=${{ secrets.NUXT_PUBLIC_FIREBASE_APP_ID }}" \
+            --set-string "global.extraEnv[5].name=NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET" \
+            --set-string "global.extraEnv[5].value=${{ secrets.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}" \
             --wait --timeout 10m
