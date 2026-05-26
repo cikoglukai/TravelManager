@@ -31,13 +31,18 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-ingress-to-gateway
+  name: allow-ingress-to-lb-facing
 spec:
+  # Both LB-facing backends: the gateway (/api) and the frontend SPA (/). The GKE
+  # Ingress load balancer + its health checks originate from Google IP ranges, not
+  # a TravelManager pod, so these two need open ingress. Downstream services do
+  # not and stay restricted to internal pods only.
   podSelector:
-    matchLabels:
-      app: api-gateway
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [api-gateway, frontend]
   policyTypes: [Ingress]
   ingress:
-    # GKE Ingress / load balancer health checks + traffic reach the gateway only.
     - {}
 {{- end }}

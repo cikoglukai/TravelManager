@@ -37,7 +37,9 @@ resource "google_secret_manager_secret" "database_url" {
   for_each  = var.service_databases
   project   = var.project_id
   secret_id = "${replace(each.key, "-service", "")}-database-url"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
   depends_on = [google_project_service.required["secretmanager.googleapis.com"]]
 }
 

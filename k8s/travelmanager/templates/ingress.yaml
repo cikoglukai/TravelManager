@@ -8,13 +8,23 @@ metadata:
   name: travelmanager
   annotations:
     {{- if eq (.Values.ingress.className | default "gce") "gce" }}
+    # GKE's ingress-gce controller matches this annotation, not spec.ingressClassName
+    # (no "gce" IngressClass object exists on the cluster). Using ingressClassName
+    # here leaves the Ingress unclaimed: no LB, no IP, no NEG.
+    kubernetes.io/ingress.class: "gce"
     kubernetes.io/ingress.global-static-ip-name: {{ .Values.ingress.staticIpName }}
-    {{- if .Values.ingress.managedCert }}
+    {{- if .Values.ingress.preSharedCert }}
+    # Reuse an existing (already-validated) Google-managed SSL cert by name —
+    # HTTPS is live immediately, no ManagedCertificate provisioning wait.
+    ingress.gcp.kubernetes.io/pre-shared-cert: {{ .Values.ingress.preSharedCert }}
+    {{- else if .Values.ingress.managedCert }}
     networking.gke.io/managed-certificates: {{ .Values.ingress.managedCertName }}
     {{- end }}
     {{- end }}
 spec:
-  ingressClassName: {{ .Values.ingress.className | default "gce" }}
+  {{- if ne (.Values.ingress.className | default "gce") "gce" }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
   rules:
     -
       {{- if .Values.ingress.host }}
@@ -36,7 +46,7 @@ spec:
                 name: frontend
                 port:
                   number: 8080
-{{- if and .Values.ingress.managedCert (eq (.Values.ingress.className | default "gce") "gce") }}
+{{- if and .Values.ingress.managedCert (not .Values.ingress.preSharedCert) (eq (.Values.ingress.className | default "gce") "gce") }}
 ---
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate

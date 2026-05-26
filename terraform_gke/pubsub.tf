@@ -6,16 +6,16 @@ locals {
 
   # subscription name => source topic
   subscriptions = {
-    "social-trip-created-sub"   = "TripCreated"
-    "social-trip-updated-sub"   = "TripUpdated"
-    "notify-travel-alert-sub"   = "TravelAlert"
-    "notify-newsletter-sub"     = "NewsletterReady"
+    "social-trip-created-sub" = "TripCreated"
+    "social-trip-updated-sub" = "TripUpdated"
+    "notify-travel-alert-sub" = "TravelAlert"
+    "notify-newsletter-sub"   = "NewsletterReady"
   }
 }
 
 resource "google_pubsub_topic" "events" {
-  for_each = toset(local.topics)
-  name     = each.value
+  for_each   = toset(local.topics)
+  name       = each.value
   depends_on = [google_project_service.required["pubsub.googleapis.com"]]
 }
 

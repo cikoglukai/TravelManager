@@ -2,7 +2,9 @@
 resource "google_secret_manager_secret" "rapidapi_key" {
   project   = var.project_id
   secret_id = "rapidapi-key"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
   depends_on = [google_project_service.required["secretmanager.googleapis.com"]]
 }
 resource "google_secret_manager_secret_version" "rapidapi_key" {
@@ -13,7 +15,9 @@ resource "google_secret_manager_secret_version" "rapidapi_key" {
 resource "google_secret_manager_secret" "sendgrid_api_key" {
   project   = var.project_id
   secret_id = "sendgrid-api-key"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 resource "google_secret_manager_secret_version" "sendgrid_api_key" {
   secret      = google_secret_manager_secret.sendgrid_api_key.id
@@ -23,7 +27,9 @@ resource "google_secret_manager_secret_version" "sendgrid_api_key" {
 resource "google_secret_manager_secret" "firebase_service_account" {
   project   = var.project_id
   secret_id = "firebase-service-account"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 resource "google_secret_manager_secret_version" "firebase_service_account" {
   secret      = google_secret_manager_secret.firebase_service_account.id
@@ -33,7 +39,9 @@ resource "google_secret_manager_secret_version" "firebase_service_account" {
 resource "google_secret_manager_secret" "google_maps_server_key" {
   project   = var.project_id
   secret_id = "google-maps-server-key"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 resource "google_secret_manager_secret_version" "google_maps_server_key" {
   secret      = google_secret_manager_secret.google_maps_server_key.id

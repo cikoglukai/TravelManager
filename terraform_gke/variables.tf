@@ -28,13 +28,13 @@ variable "db_password" {
 
 # One logical database per microservice (DB-per-service, single instance).
 variable "service_databases" {
-  type    = map(string)
+  type = map(string)
   default = {
-    user-service        = "travelmanager_user"
-    trip-service        = "travelmanager_trip"
-    destination-service = "travelmanager_destination"
-    social-service      = "travelmanager_social"
-    travel-info-service = "travelmanager_travelinfo"
+    user-service         = "travelmanager_user"
+    trip-service         = "travelmanager_trip"
+    destination-service  = "travelmanager_destination"
+    social-service       = "travelmanager_social"
+    travel-info-service  = "travelmanager_travelinfo"
     notification-service = "travelmanager_notification"
   }
 }

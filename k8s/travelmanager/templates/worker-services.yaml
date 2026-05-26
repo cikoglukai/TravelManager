@@ -18,6 +18,7 @@ spec:
       labels:
         app: {{ $name }}
         tier: async-worker
+        {{- include "tm.labels" $ | nindent 8 }}
     spec:
       serviceAccountName: travelmanager
       containers:

@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: {{ $name }}
+        {{- include "tm.labels" $ | nindent 8 }}
     spec:
       serviceAccountName: travelmanager
       containers:
