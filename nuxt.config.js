@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
 
-  // Pure frontend now: the monolith server/ moved to archive/monolith-server.
+  // Pure frontend now: the old monolith server/ lives on the IAAS/paas branches.
   // All /api traffic is routed to the API Gateway by the ingress (prod) or nginx
   // (local). apiBase lets the SPA target a different gateway origin if needed.
   runtimeConfig: {
