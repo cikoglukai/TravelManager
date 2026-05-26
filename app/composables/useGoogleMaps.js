@@ -13,7 +13,7 @@ export function useGoogleMaps() {
 
     loaderPromise = new Promise((resolve, reject) => {
       const s = document.createElement('script')
-      s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,marker`
       s.async = true
       s.defer = true
       s.onload = () => resolve(window.google.maps)

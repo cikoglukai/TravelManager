@@ -29,3 +29,13 @@ resource "google_secret_manager_secret_version" "firebase_service_account" {
   secret      = google_secret_manager_secret.firebase_service_account.id
   secret_data = var.firebase_service_account
 }
+
+resource "google_secret_manager_secret" "google_maps_server_key" {
+  project   = var.project_id
+  secret_id = "google-maps-server-key"
+  replication { auto {} }
+}
+resource "google_secret_manager_secret_version" "google_maps_server_key" {
+  secret      = google_secret_manager_secret.google_maps_server_key.id
+  secret_data = var.google_maps_server_key
+}

@@ -44,6 +44,10 @@ export default defineEventHandler(async (event) => {
       currency:    h.currencycode || 'EUR',
       rating:      h.review_score ?? null,
       address:     h.address || h.city || '',
+      // Booking returns coords on most rows; expose them so the map can pin
+      // each hotel. Null when absent — the frontend just skips that marker.
+      lat:         h.latitude ?? null,
+      lng:         h.longitude ?? null,
       photo:       h.max_photo_url || h.main_photo_url || '',
       bookingLink: h.url || `https://www.booking.com/hotel/${h.hotel_id}`,
     }))

@@ -7,10 +7,12 @@
   "exports": {
     ".": "./index.js",
     "./db": "./db.js",
+    "./schema-bootstrap": "./schema-bootstrap.js",
     "./firebase": "./firebase.js",
     "./identity": "./identity.js",
     "./pubsub": "./pubsub.js",
-    "./tiers": "./tiers.js"
+    "./tiers": "./tiers.js",
+    "./geocode": "./geocode.js"
   },
   "dependencies": {
     "@google-cloud/pubsub": "^4.7.0",

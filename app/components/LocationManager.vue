@@ -73,12 +73,26 @@
         <!-- Fields -->
         <div class="lm-fields">
           <div class="lm-field">
-            <label>Location Name <span class="lm-required">*</span></label>
+            <label>Category</label>
+            <div class="lm-cat-row">
+              <button
+                v-for="c in CATEGORIES" :key="c.value"
+                type="button"
+                class="lm-cat-pill"
+                :class="{ 'lm-cat-pill--active': form.category === c.value }"
+                @click="form.category = c.value"
+              >{{ c.emoji }} {{ c.label }}</button>
+            </div>
+          </div>
+          <div class="lm-field">
+            <label>{{ activeCategory.label }} Name <span class="lm-required">*</span></label>
             <input
+              ref="nameInput"
               v-model="form.name"
               type="text"
               maxlength="120"
-              placeholder="e.g. Schönbrunn Palace, Blue Lagoon, Eiffel Tower…"
+              :placeholder="categoryPlaceholder"
+              autocomplete="off"
               autofocus
             />
           </div>
@@ -144,7 +158,7 @@
 
         <!-- Content -->
         <div class="lm-card-body">
-          <h4 class="lm-card-name">{{ loc.name }}</h4>
+          <h4 class="lm-card-name">{{ catEmoji(loc.category) }} {{ loc.name }}</h4>
           <p v-if="loc.description" class="lm-card-desc">{{ loc.description }}</p>
           <p v-else class="lm-card-desc lm-card-desc--empty">No description added.</p>
           <p v-if="loc.date_from || loc.date_to" class="lm-card-dates">
@@ -169,6 +183,8 @@ const props = defineProps({
   tripId: { type: Number, required: true },
 })
 const { apiFetch } = useApiFetch()
+const { toastError } = useToast()
+const { confirm } = useConfirm()
 const { uploadImage } = useImageUpload()
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -182,8 +198,45 @@ const imageError = ref('')
 const isDragging = ref(false)
 const urlInput   = ref('')
 const fileInput  = ref(null)
+const nameInput  = ref(null)
 
-const form = reactive({ name: '', description: '', image_url: '', date_from: '', date_to: '' })
+const form = reactive({ name: '', description: '', image_url: '', date_from: '', date_to: '', latitude: null, longitude: null, category: 'other' })
+
+// Category drives the Places autocomplete filter so the user picks the exact
+// hotel / airport / restaurant rather than a generic place.
+const CATEGORIES = [
+  { value: 'hotel',      label: 'Hotel',      emoji: '🏨', types: ['lodging'] },
+  { value: 'restaurant', label: 'Restaurant', emoji: '🍽️', types: ['restaurant'] },
+  { value: 'airport',    label: 'Airport',    emoji: '✈️', types: ['airport'] },
+  { value: 'attraction', label: 'Sight',      emoji: '📸', types: ['tourist_attraction'] },
+  { value: 'other',      label: 'Place',      emoji: '📍', types: ['establishment'] },
+]
+const activeCategory = computed(() => CATEGORIES.find(c => c.value === form.category) || CATEGORIES[4])
+const categoryPlaceholder = computed(() => ({
+  hotel: 'Search the exact hotel you stayed at…',
+  restaurant: 'Search a restaurant…',
+  airport: 'Search the airport you flew from / into…',
+  attraction: 'Search a landmark or sight…',
+  other: 'Search a place…',
+}[form.category]))
+
+// Places autocomplete on the name field. setTypes lets us re-filter live when
+// the category changes. Chosen point's coords are stored so it pins exactly.
+let pickedName = ''
+const { setTypes } = usePlacesAutocomplete(nameInput, {
+  types: activeCategory.value.types,
+  onSelect: ({ name, lat, lng }) => {
+    form.name = name
+    form.latitude = lat
+    form.longitude = lng
+    pickedName = name
+  },
+})
+watch(() => form.category, () => setTypes(activeCategory.value.types))
+// Typing past a pick drops the stale coords; server re-geocodes the name.
+watch(() => form.name, (val) => {
+  if (val !== pickedName) { form.latitude = null; form.longitude = null }
+})
 
 // ── Load locations ────────────────────────────────────────────────────────────
 onMounted(fetchLocations)
@@ -207,6 +260,10 @@ function openAddForm() {
   form.image_url      = ''
   form.date_from      = ''
   form.date_to        = ''
+  form.latitude       = null
+  form.longitude      = null
+  form.category       = 'other'
+  pickedName          = ''
   urlInput.value      = ''
   formError.value     = ''
   imageError.value    = ''
@@ -216,8 +273,12 @@ function openAddForm() {
 function startEdit(loc) {
   editingId.value     = loc.id
   form.name           = loc.name
+  pickedName          = loc.name   // keep loaded coords from being cleared
   form.description    = loc.description
   form.image_url      = loc.image_url
+  form.latitude       = loc.latitude ?? null
+  form.longitude      = loc.longitude ?? null
+  form.category       = loc.category || 'other'
   form.date_from      = loc.date_from ? loc.date_from.slice(0, 10) : ''
   form.date_to        = loc.date_to   ? loc.date_to.slice(0, 10)   : ''
   urlInput.value      = loc.image_url.startsWith('http') ? loc.image_url : ''
@@ -319,17 +380,18 @@ async function submit() {
       date_from: form.date_from || null,
       date_to:   form.date_to   || null,
     }
+    const coordPayload = { latitude: form.latitude, longitude: form.longitude, category: form.category }
     if (editingId.value) {
       const updated = await apiFetch(`/api/locations/${editingId.value}`, {
         method: 'PUT',
-        body: { name: form.name, description: form.description, image_url: form.image_url, ...datePayload },
+        body: { name: form.name, description: form.description, image_url: form.image_url, ...coordPayload, ...datePayload },
       })
       const idx = locations.value.findIndex(l => l.id === editingId.value)
       if (idx !== -1) locations.value[idx] = updated
     } else {
       const created = await apiFetch(`/api/locations/trip/${props.tripId}`, {
         method: 'POST',
-        body: { name: form.name, description: form.description, image_url: form.image_url, ...datePayload },
+        body: { name: form.name, description: form.description, image_url: form.image_url, ...coordPayload, ...datePayload },
       })
       locations.value.push(created)
     }
@@ -345,15 +407,19 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+function catEmoji(cat) {
+  return (CATEGORIES.find(c => c.value === cat) || CATEGORIES[4]).emoji
+}
+
 // ── Delete ────────────────────────────────────────────────────────────────────
 async function remove(loc) {
-  if (!confirm(`Remove "${loc.name}" from this trip?`)) return
+  if (!(await confirm({ title: 'Remove location?', message: `"${loc.name}" will be removed from this trip.`, confirmText: 'Remove', danger: true }))) return
   try {
     await apiFetch(`/api/locations/${loc.id}`, { method: 'DELETE' })
     locations.value = locations.value.filter(l => l.id !== loc.id)
     if (editingId.value === loc.id) closeForm()
   } catch (err) {
-    alert(err.data?.statusMessage || 'Could not delete location.')
+    toastError(err.data?.statusMessage || 'Could not delete location.')
   }
 }
 </script>
@@ -513,6 +579,23 @@ async function remove(loc) {
   font-size: 0.85rem;
   flex-shrink: 0;
 }
+
+/* ── Category pills ── */
+.lm-cat-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.lm-cat-pill {
+  background: var(--white);
+  border: 1.5px solid var(--sand-dark);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lm-cat-pill:hover { border-color: var(--gold); color: var(--navy); }
+.lm-cat-pill--active { background: var(--navy); border-color: var(--navy); color: var(--white); }
 
 /* ── Fields ── */
 .lm-fields { display: flex; flex-direction: column; gap: 16px; }

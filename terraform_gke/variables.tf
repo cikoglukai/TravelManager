@@ -55,3 +55,10 @@ variable "firebase_service_account" {
   default   = "{}"
   sensitive = true
 }
+# Server-side Google Maps key (Geocoding API) used by trip-service. The browser
+# key is public and injected as a NUXT_PUBLIC_* env, not stored here.
+variable "google_maps_server_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}

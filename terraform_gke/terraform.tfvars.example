@@ -6,3 +6,4 @@ db_password = "change-me-strong"
 rapidapi_key             = ""
 sendgrid_api_key         = ""
 firebase_service_account = "{}"
+google_maps_server_key   = ""   # Geocoding API key (server-side). Blank = Open-Meteo fallback.

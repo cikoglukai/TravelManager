@@ -15,9 +15,11 @@
         <label for="destination">Destination *</label>
         <input
           id="destination"
+          ref="destinationInput"
           v-model="form.destination"
           type="text"
-          placeholder="e.g. Norway"
+          placeholder="Start typing a city…"
+          autocomplete="off"
           required
         />
       </div>
@@ -28,9 +30,11 @@
         <label for="origin">Origin City</label>
         <input
           id="origin"
+          ref="originInput"
           v-model="form.origin"
           type="text"
-          placeholder='e.g. "Stuttgart" — used to search real flights & buses'
+          placeholder="Start typing a city… — used for real flights & buses"
+          autocomplete="off"
         />
       </div>
       <div class="form-group">
@@ -95,6 +99,35 @@ const form = reactive({
   start_date: props.trip?.start_date ?? '',
   short_description: props.trip?.short_description ?? '',
   detail_description: props.trip?.detail_description ?? '',
+  // Coords captured when a place is picked from the autocomplete. Sent to the
+  // API so the server trusts the chosen point instead of re-geocoding text.
+  dest_lat: props.trip?.dest_lat ?? null,
+  dest_lng: props.trip?.dest_lng ?? null,
+})
+
+// City-only autocomplete on destination + origin: only real places selectable.
+const destinationInput = ref(null)
+const originInput = ref(null)
+
+let pickedDestination = props.trip?.destination ?? ''
+usePlacesAutocomplete(destinationInput, {
+  types: ['(cities)'],
+  onSelect: ({ name, lat, lng }) => {
+    form.destination = name
+    form.dest_lat = lat
+    form.dest_lng = lng
+    pickedDestination = name
+  },
+})
+usePlacesAutocomplete(originInput, {
+  types: ['(cities)'],
+  onSelect: ({ name }) => { form.origin = name },
+})
+
+// Typing after a pick invalidates the captured coords — let the server
+// re-geocode rather than pin a stale point. Skips the change made by onSelect.
+watch(() => form.destination, (val) => {
+  if (val !== pickedDestination) { form.dest_lat = null; form.dest_lng = null }
 })
 
 async function handleSubmit() {
@@ -122,6 +155,14 @@ async function handleSubmit() {
   padding: 36px;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  animation: formIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes formIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip-form { animation: none; }
 }
 
 .form-row {
