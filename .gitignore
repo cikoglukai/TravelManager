@@ -65,6 +65,12 @@ terraform_iaas/*.auto.tfvars
 terraform_iaas/*.tfstate
 terraform_iaas/*.tfstate.*
 
+terraform_gke/.terraform/
+terraform_gke/terraform.tfvars
+terraform_gke/*.auto.tfvars
+terraform_gke/*.tfstate
+terraform_gke/*.tfstate.*
+
 # Generated local Helm secret overlay (real keys from .env)
 k8s/travelmanager/values-local.secret.yaml
 *.secret.yaml
