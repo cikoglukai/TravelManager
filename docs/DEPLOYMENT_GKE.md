@@ -137,14 +137,42 @@ kubectl rollout restart deploy -n default
 ---
 
 ## 5. Deploy with Helm
+The `NUXT_PUBLIC_*` browser config (Firebase web config + Maps browser key) is injected
+into every pod as runtime env via `global.extraEnv`. These are client-side public values
+(they ship in the SPA bundle); the Maps browser key is protected by HTTP-referrer
+restriction, not secrecy. Source them from the repo-root `.env` so no secret is typed into
+the shell or committed:
 ```bash
+set -a; source .env; set +a   # loads NUXT_PUBLIC_* from repo-root .env
+
 helm upgrade --install travelmanager k8s/travelmanager \
   --set global.imageRegistry="$REG" \
   --set global.imageTag=latest \
   --set global.gcpProject=<PROJECT> \
   --set global.cloudSqlInstance=<PROJECT>:europe-west1:travelmanager-pg-gke \
   --set serviceAccount.gcpServiceAccount=travelmanager-gke@<PROJECT>.iam.gserviceaccount.com \
-  --set ingress.preSharedCert=onecloudaway-cert
+  --set ingress.preSharedCert=onecloudaway-cert \
+  --set-string "global.extraEnv[0].name=NUXT_PUBLIC_GOOGLE_MAPS_KEY" \
+  --set-string "global.extraEnv[0].value=$NUXT_PUBLIC_GOOGLE_MAPS_KEY" \
+  --set-string "global.extraEnv[1].name=NUXT_PUBLIC_FIREBASE_API_KEY" \
+  --set-string "global.extraEnv[1].value=$NUXT_PUBLIC_FIREBASE_API_KEY" \
+  --set-string "global.extraEnv[2].name=NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN" \
+  --set-string "global.extraEnv[2].value=$NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN" \
+  --set-string "global.extraEnv[3].name=NUXT_PUBLIC_FIREBASE_PROJECT_ID" \
+  --set-string "global.extraEnv[3].value=$NUXT_PUBLIC_FIREBASE_PROJECT_ID" \
+  --set-string "global.extraEnv[4].name=NUXT_PUBLIC_FIREBASE_APP_ID" \
+  --set-string "global.extraEnv[4].value=$NUXT_PUBLIC_FIREBASE_APP_ID" \
+  --set-string "global.extraEnv[5].name=NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET" \
+  --set-string "global.extraEnv[5].value=$NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET" \
+  --wait --timeout 10m
+```
+**Note on re-runs:** Helm `--set` values are not persisted across upgrades. A later
+`helm upgrade` that omits these flags drops the env again — either re-pass them every time,
+or add `--reuse-values` to keep the prior release's values and only override what changed:
+```bash
+helm upgrade travelmanager k8s/travelmanager --reuse-values \
+  --set-string "global.extraEnv[1].name=NUXT_PUBLIC_FIREBASE_API_KEY" \
+  --set-string "global.extraEnv[1].value=$NUXT_PUBLIC_FIREBASE_API_KEY"   # …etc
 ```
 
 ---
@@ -168,6 +196,15 @@ All four are now fixed in the chart (`k8s/travelmanager/templates/`):
 - **HTTPS**: rather than wait 15–60 min for a new ManagedCertificate, reuse the
   existing ACTIVE Google-managed cert via a new chart value `ingress.preSharedCert`
   (renders `ingress.gcp.kubernetes.io/pre-shared-cert`) → HTTPS live immediately.
+- **Login broke with `Firebase: No Firebase App '[DEFAULT]' has been created`**: the
+  first deploy omitted the `NUXT_PUBLIC_*` `global.extraEnv` (it was deferred — see §5),
+  so the frontend served `firebase:{apiKey:""}`. The client plugin
+  (`app/plugins/0.firebase.client.js`) skips `initializeApp()` when `apiKey` is empty, so
+  any later `getAuth()` throws. Fix: deploy with the `extraEnv` block from §5. Verify the
+  served payload carries the key:
+  ```bash
+  curl -s https://onecloudaway.de/ | grep -o 'firebase:{apiKey:"[^"]*"'   # non-empty
+  ```
 
 ---
 
@@ -190,8 +227,8 @@ curl -Ik -H 'Host: onecloudaway.de' https://8.232.102.95/ # 200 over HTTPS
 ---
 
 ## Still TODO
-- `NUXT_PUBLIC_*` browser config (Firebase web config + Maps browser key) for login +
-  maps — a second `helm upgrade` passing them through `global.extraEnv` (see how the
-  CI workflow sets them).
 - Move the node-SA `artifactregistry.reader` binding (§4) into `terraform_gke/iam.tf`
   so it's reproducible instead of a manual gcloud step.
+- Persist the `NUXT_PUBLIC_*` `global.extraEnv` values in a gitignored `values-prod.yaml`
+  (or `values.yaml` `global.extraEnv`) so they survive a plain `helm upgrade` without
+  `--reuse-values` and without re-passing every flag.
