@@ -33,7 +33,7 @@ spec:
           {{- end }}
           readinessProbe:
             httpGet:
-              path: {{ $svc.healthPath | default "/api/health" }}
+              path: {{ $svc.readinessPath | default $svc.healthPath | default "/api/health" }}
               port: {{ $svc.port }}
             initialDelaySeconds: 5
             periodSeconds: 10

@@ -14,6 +14,11 @@ global:
 postgres:
   enabled: false
 
+# In-cluster Firestore emulator — LOCAL ONLY. Prod uses real Firestore (ADC via
+# Workload Identity). When enabled, set FIRESTORE_EMULATOR_HOST in global.extraEnv.
+firestoreEmulator:
+  enabled: false
+
 # Per-service plain Secret values, used only when externalSecrets.enabled=false
 # (local). Map: service -> { ENV_KEY: value }.
 localSecretValues: {}
@@ -34,7 +39,7 @@ ingress:
   enabled: true
   className: gce                 # local: nginx
   managedCert: true              # local: false
-  host: travelmanager.example.com
+  host: onecloudaway.de
   staticIpName: travelmanager-ip
   managedCertName: travelmanager-cert
 
@@ -49,17 +54,20 @@ syncServices:
   user-service:
     port: 8080
     db: true
-    healthPath: /api/health
+    healthPath: /api/health      # liveness — always 200 while process is up
+    readinessPath: /api/ready    # readiness — 503 until DB schema bootstrapped
     hpa: { min: 2, max: 8, cpu: 70 }
   trip-service:
     port: 8080
     db: true
     healthPath: /api/health
+    readinessPath: /api/ready
     hpa: { min: 2, max: 10, cpu: 70 }
   destination-service:
     port: 8080
     db: true
     healthPath: /api/health
+    readinessPath: /api/ready
     hpa: { min: 2, max: 6, cpu: 70 }
   frontend:
     port: 8080
@@ -73,14 +81,18 @@ workerServices:
     port: 8080
     db: true
     replicas: 2
+    readinessPath: /api/ready    # 503 until DB schema bootstrapped
   travel-info-service:
     port: 8080
     db: true
-    replicas: 1
+    replicas: 2
+    readinessPath: /api/ready
+    hpa: { min: 2, max: 6, cpu: 70 }
   notification-service:
     port: 8080
     db: true
     replicas: 2
+    readinessPath: /api/ready
 
 # Scheduled jobs. They POST to a service's task endpoint.
 cronJobs:
@@ -111,6 +123,7 @@ serviceSecrets:
   trip-service:
     DATABASE_URL: trip-database-url
     RAPIDAPI_KEY: rapidapi-key
+    GOOGLE_MAPS_SERVER_KEY: google-maps-server-key
     FIREBASE_SERVICE_ACCOUNT: firebase-service-account
   destination-service:
     DATABASE_URL: destination-database-url

@@ -22,8 +22,20 @@ export async function initTripDb() {
       start_date          TEXT        NOT NULL,
       short_description   TEXT        NOT NULL,
       detail_description  TEXT        NOT NULL DEFAULT '',
+      dest_lat            NUMERIC,
+      dest_lng            NUMERIC,
+      dest_country        TEXT,
       created_at          TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- Backfill columns on pre-existing tables (CREATE IF NOT EXISTS above is a
+    -- no-op once the table exists, so new columns need an explicit ADD).
+    ALTER TABLE trips ADD COLUMN IF NOT EXISTS dest_lat NUMERIC;
+    ALTER TABLE trips ADD COLUMN IF NOT EXISTS dest_lng NUMERIC;
+    ALTER TABLE trips ADD COLUMN IF NOT EXISTS dest_country TEXT;
+    -- Denormalised like tally (source of truth = Firestore) so recommendations
+    -- can rank by popularity in plain SQL without N Firestore reads.
+    ALTER TABLE trips ADD COLUMN IF NOT EXISTS like_count INTEGER NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS trips_user_uid_idx ON trips (user_uid);
 
@@ -33,11 +45,19 @@ export async function initTripDb() {
       name        TEXT        NOT NULL,
       description TEXT        NOT NULL DEFAULT '',
       image_url   TEXT        NOT NULL DEFAULT '',
+      latitude    NUMERIC,
+      longitude   NUMERIC,
       date_from   DATE,
       date_to     DATE,
       position    INTEGER     NOT NULL DEFAULT 0,
       created_at  TIMESTAMPTZ DEFAULT NOW()
     );
+
+    ALTER TABLE plan_locations ADD COLUMN IF NOT EXISTS latitude  NUMERIC;
+    ALTER TABLE plan_locations ADD COLUMN IF NOT EXISTS longitude NUMERIC;
+    -- Place category (hotel | restaurant | airport | attraction | other) so the
+    -- autocomplete can filter to that place type and the map can icon it.
+    ALTER TABLE plan_locations ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other';
 
     CREATE TABLE IF NOT EXISTS reviews (
       id            SERIAL      PRIMARY KEY,

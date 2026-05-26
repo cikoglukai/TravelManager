@@ -1,18 +1,17 @@
-// Bootstrap: init schema, then (unless Pub/Sub is disabled) start the pull
-// subscribers that drive the feed builder. Subscriptions are provisioned by
-// Terraform. In environments using Pub/Sub PUSH instead, POST /api/events/trip
-// is the alternative entry point.
+// Bootstrap: init schema (retrying on cold-start DB races), then (unless Pub/Sub
+// is disabled) start the pull subscribers that drive the feed builder.
+// Subscriptions are provisioned by Terraform. In environments using Pub/Sub PUSH
+// instead, POST /api/events/trip is the alternative entry point.
+import { bootstrapSchema } from '@travelmanager/shared/schema-bootstrap'
 import { initSocialDb } from '../utils/schema.js'
 import { buildFeedFromTrip } from '../utils/feed.js'
 import { control } from '../utils/control.js'
+import { readiness } from '../utils/ready.js'
 
 export default defineNitroPlugin(async () => {
-  try {
-    await initSocialDb()
-    console.log('[social-service] schema ready')
-  } catch (err) {
-    console.error('[social-service] schema bootstrap failed', err)
-  }
+  // Don't start subscribers until the schema exists — they INSERT feed rows.
+  const ok = await bootstrapSchema('social-service', initSocialDb, { readiness })
+  if (!ok) return
 
   if (process.env.PUBSUB_DISABLED === '1') {
     console.log('[social-service] Pub/Sub disabled — subscribers not started')
