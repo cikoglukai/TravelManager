@@ -4,6 +4,9 @@ resource "google_container_cluster" "primary" {
   location         = var.region
   enable_autopilot = true
 
+  # Allow `terraform destroy` to delete the cluster (we recreate it on demand).
+  deletion_protection = false
+
   # Autopilot enables Workload Identity automatically (PROJECT.svc.id.goog).
   release_channel {
     channel = "REGULAR"

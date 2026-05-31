@@ -16,6 +16,9 @@ spec:
       backoffLimit: 2
       activeDeadlineSeconds: 600
       template:
+        metadata:
+          labels:
+            {{- include "tm.labels" $ | nindent 12 }}
         spec:
           restartPolicy: Never
           containers:
