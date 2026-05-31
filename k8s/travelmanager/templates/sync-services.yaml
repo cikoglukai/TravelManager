@@ -8,7 +8,11 @@ metadata:
     app: {{ $name }}
     {{- include "tm.labels" $ | nindent 4 }}
 spec:
+  {{- if not $svc.hpa }}
+  # When an HPA exists it owns .spec.replicas; templating it here makes Helm's
+  # server-side apply conflict with the autoscaler (vpa-recommender on Autopilot).
   replicas: {{ $svc.replicas | default 2 }}
+  {{- end }}
   selector:
     matchLabels:
       app: {{ $name }}
@@ -44,6 +48,8 @@ spec:
               port: {{ $svc.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
+            timeoutSeconds: 5        # default 1s killed busy-but-healthy pods under load
+            failureThreshold: 3      # tolerate transient slowness before restart
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
         {{- if and $svc.db $.Values.global.cloudSql.enabled }}

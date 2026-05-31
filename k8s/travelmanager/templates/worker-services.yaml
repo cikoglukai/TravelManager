@@ -9,7 +9,11 @@ metadata:
     tier: async-worker
     {{- include "tm.labels" $ | nindent 4 }}
 spec:
+  {{- if not $svc.hpa }}
+  # HPA (if present) owns .spec.replicas; templating it conflicts with the
+  # autoscaler under server-side apply (vpa-recommender on Autopilot).
   replicas: {{ $svc.replicas | default 1 }}
+  {{- end }}
   selector:
     matchLabels:
       app: {{ $name }}

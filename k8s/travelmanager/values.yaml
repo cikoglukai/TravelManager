@@ -108,7 +108,7 @@ cronJobs:
 
 resources:
   requests: { cpu: 100m, memory: 192Mi }
-  limits:   { cpu: 500m, memory: 512Mi }
+  limits:   { cpu: 1000m, memory: 512Mi }   # was 500m — half-core throttled the Node event loop, probes timed out
 
 # Workload Identity: bind this KSA to a GCP SA that can access Secret Manager,
 # Cloud SQL and Pub/Sub.
