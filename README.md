@@ -75,6 +75,7 @@ Helm (infrastructure as code), GitHub Actions (automated deployment), Locust (lo
 
 | Document | What's in it |
 |---|---|
+| [`docs/CLOUD_PROJECT_DOCUMENTATION.md`](docs/CLOUD_PROJECT_DOCUMENTATION.md) | **The rubric-aligned deliverable** (§1 Requirements → §4 Performance) — system context, domain model, runtime/microservices, datastores + ER, roles, IaC, pipelines, perf. Presentation source. |
 | [`docs/SOFTWARE_ARCHITECTURE.md`](docs/SOFTWARE_ARCHITECTURE.md) | The Cloud Project Software Architecture Document — design, services, 12-Factor mapping, infrastructure. |
 | [`docs/MILESTONE2_SUBMISSION.md`](docs/MILESTONE2_SUBMISSION.md) | The single Milestone-2 deliverable: every requirement mapped to where it's implemented, plus the manual Google Cloud setup. |
 | [`docs/MILESTONE2_CHANGELOG.md`](docs/MILESTONE2_CHANGELOG.md) | What changed from Milestone 1 (monolith) to Milestone 2 (microservices). |
